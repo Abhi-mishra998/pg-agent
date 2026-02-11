@@ -1,0 +1,104 @@
+{
+  "card_id": "rc_a6615ff9",
+  "incident_id": null,
+  "title": "Test",
+  "summary": "",
+  "category": "",
+  "severity": "medium",
+  "actions": [
+    {
+      "action_id": "ra_a3ee6d9b",
+      "action_type": "",
+      "title": "Test",
+      "description": "",
+      "sql_command": null,
+      "config_change": null,
+      "validation_command": null,
+      "priority": "medium",
+      "estimated_duration": "",
+      "risk": "low",
+      "risk_indicators": {
+        "risk_level": "low",
+        "severity_badge": "\ud83d\udfe2 LOW",
+        "color_code": "#00CC66",
+        "risk_summary": "",
+        "risk_details": []
+      },
+      "safety_warnings": {
+        "is_destructive": false
+      },
+      "operation_mode": "online",
+      "requires_maintenance_window": false,
+      "requires_approval": true,
+      "approval_workflow": {
+        "workflow_id": "wf_9c92ca67",
+        "action_id": "act_test",
+        "steps": [
+          {
+            "step_id": "step_f8330d04",
+            "step_number": 1,
+            "approver_role": "DBA_SENIOR",
+            "approver_name": "alice",
+            "status": "rejected",
+            "requested_at": "2026-01-28T06:07:42.653324",
+            "responded_at": "2026-01-28T06:07:42.653585",
+            "comments": "Needs review",
+            "escalation_reason": null
+          }
+        ],
+        "current_step": 0,
+        "status": "rejected",
+        "created_at": "2026-01-28T06:07:42.653328",
+        "completed_at": null,
+        "requires_multi_approval": false
+      },
+      "rollback_plan": {
+        "data_loss_risk": "none"
+      },
+      "impact_scope": "table",
+      "affected_objects": [],
+      "status": "pending",
+      "executed_at": null,
+      "executed_by": null,
+      "kb_entry_id": null,
+      "references": []
+    }
+  ],
+  "confidence_score": 0.5,
+  "evidence_count": 0,
+  "root_cause": null,
+  "audit_trail": {
+    "trail_id": "trail_c887e19c",
+    "review_card_id": "",
+    "entries": [
+      {
+        "audit_id": "audit_ffbf18dc",
+        "timestamp": "2026-01-28T06:07:42.653338",
+        "action_type": "created",
+        "actor": "system",
+        "actor_role": "",
+        "target_type": "action",
+        "target_id": "ra_a3ee6d9b",
+        "details": "Action 'Test' added to review card",
+        "metadata": {}
+      },
+      {
+        "audit_id": "audit_63ac7d25",
+        "timestamp": "2026-01-28T06:07:42.653592",
+        "action_type": "rejected",
+        "actor": "alice",
+        "actor_role": "approver",
+        "target_type": "action",
+        "target_id": "ra_a3ee6d9b",
+        "details": "Action rejected by alice: Needs review",
+        "metadata": {}
+      }
+    ],
+    "created_at": "2026-01-28T06:07:42.653318"
+  },
+  "status": "pending_review",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "created_at": "2026-01-28T06:07:42.653319",
+  "expires_at": null
+}

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recommendation Review Card</title>
+    <link rel="stylesheet" href="../static/css/review.css">
+</head>
+<body>
+    <div class="review-container">
+        <!-- Header -->
+        <header class="review-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1 class="review-title">{{ title }}</h1>
+                    <p class="review-summary">{{ summary }}</p>
+                </div>
+                <div class="header-right">
+                    <span class="severity-badge severity-{{ severity }}">{{ severity|upper }}</span>
+                    <span class="confidence-badge">{{ confidence_score }}% Confidence</span>
+                </div>
+            <div class="header-meta">
+                <span class="meta-item">ID: {{ card_id }}</span>
+                {% if incident_id %}
+                <span class="meta-item">Incident: {{ incident_id }}</span>
+                {% endif %}
+                <span class="meta-item">Created: {{ created_at }}</span>
+                <span class="meta-item">Actions: {{ actions|length }}</span>
+            </div>
+        </header>
+
+        <!-- Context Bar -->
+        <div class="context-bar">
+            <div class="context-item">
+                <span class="context-label">Root Cause</span>
+                <span class="context-value">{{ root_cause|default("Unknown") }}</span>
+            </div>
+            <div class="context-item">
+                <span class="context-label">Evidence</span>
+                <span class="context-value">{{ evidence_count }} items</span>
+            </div>
+            <div class="context-item">
+                <span class="context-label">High Risk Actions</span>
+                <span class="context-value risk-high">{{ high_risk_count }}</span>
+            </div>
+            <div class="context-item">
+                <span class="context-label">Approval Required</span>
+                <span class="context-value">{{ approval_required_count }}</span>
+            </div>
+
+        <!-- Actions -->
+        <section class="actions-section">
+            <h2>Recommended Actions</h2>
+            
+            {% for action in actions %}
+            <div class="action-card risk-{{ action.risk }}" id="action-{{ action.action_id }}">
+                <!-- Action Header -->
+                <div class="action-header">
+                    <div class="action-title-row">
+                        <span class="action-priority priority-{{ action.priority }}">
+                            {% if action.priority == 'critical' %}⚡
+                            {% elif action.priority == 'high' %}📋
+                            {% elif action.priority == 'medium' %}📝
+                            {% else %}📚{% endif %}
+                        </span>
+                        <h3 class="action-title">{{ action.title }}</h3>
+                    </div>
+                    <div class="action-badges">
+                        <span class="risk-badge risk-{{ action.risk }}">{{ action.risk|upper }}</span>
+                        <span class="type-badge">{{ action.action_type }}</span>
+                    </div>
+
+                <!-- Description -->
+                <p class="action-description">{{ action.description }}</p>
+
+                <!-- Safety Indicators -->
+                <div class="safety-indicators">
+                    <div class="indicator">
+                        <span class="indicator-icon">🛡️</span>
+                        <span class="indicator-label">Risk</span>
+                        <span class="indicator-value risk-{{ action.risk }}">{{ action.risk|upper }}</span>
+                    </div>
+                    <div class="indicator">
+                        <span class="indicator-icon">{% if action.operation_mode == 'online' %}🟢{% else %}🔴{% endif %}</span>
+                        <span class="indicator-label">Mode</span>
+                        <span class="indicator-value">{{ action.operation_mode|title }}</span>
+                    </div>
+                    <div class="indicator">
+                        <span class="indicator-icon">📊</span>
+                        <span class="indicator-label">Impact</span>
+                        <span class="indicator-value">{{ action.impact_scope|title }}</span>
+                    </div>
+                    <div class="indicator">
+                        <span class="indicator-icon">⏱️</span>
+                        <span class="indicator-label">Duration</span>
+                        <span class="indicator-value">{{ action.estimated_duration|default("~1 min") }}</span>
+                    </div>
+
+                <!-- SQL Preview (Read-Only) -->
+                {% if action.sql_command %}
+                <div class="sql-section">
+                    <div class="sql-header">
+                        <span class="sql-icon">📝</span>
+                        <span class="sql-label">SQL Preview</span>
+                        <span class="sql-badge">Read-Only</span>
+                    </div>
+                    <div class="sql-preview">
+                        <pre>{{ action.sql_command }}</pre>
+                        <button class="copy-btn" onclick="copySQL('{{ action.action_id }}')" data-sql="{{ action.sql_command }}">
+                            📋 Copy
+                        </button>
+                    </div>
+                {% endif %}
+
+                <!-- Safety Warnings -->
+                {% if action.safety_warnings.warnings %}
+                <div class="warnings-section {% if action.safety_warnings.is_destructive %}warnings-danger{% endif %}">
+                    <div class="warnings-header">
+                        <span class="warnings-icon">⚠️</span>
+                        <span class="warnings-label">Safety Warnings</span>
+                    </div>
+                    <ul class="warnings-list">
+                        {% for warning in action.safety_warnings.warnings %}
+                        <li>{{ warning }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <!-- Rollback Plan -->
+                {% if action.rollback_plan.rollback_command %}
+                <div class="rollback-section">
+                    <div class="rollback-header">
+                        <span class="rollback-icon">🔄</span>
+                        <span class="rollback-label">Rollback Plan</span>
+                        <span class="rollback-risk risk-{{ action.rollback_plan.data_loss_risk }}">Data Risk: {{ action.rollback_plan.data_loss_risk }}</span>
+                    </div>
+                    <div class="rollback-command">
+                        <code>{{ action.rollback_plan.rollback_command }}</code>
+                    </div>
+                    {% if action.rollback_plan.recovery_time_estimate %}
+                    <div class="rollback-meta">
+                        <span>Recovery Time: {{ action.rollback_plan.recovery_time_estimate }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Approval Workflow -->
+                {% if action.requires_approval and action.approval_workflow %}
+                <div class="approval-section">
+                    <div class="approval-header">
+                        <span class="approval-icon">🛡️</span>
+                        <span class="approval-label">Approval Workflow</span>
+                        <span class="approval-status status-{{ action.approval_workflow.status }}">
+                            {{ action.approval_workflow.status|replace('_', ' ')|title }}
+                        </span>
+                    </div>
+                    <div class="approval-steps">
+                        {% for step in action.approval_workflow.steps %}
+                        <div class="approval-step step-{{ step.status }}">
+                            <div class="step-marker">
+                                {% if step.status == 'approved' %}✅
+                                {% elif step.status == 'rejected' %}❌
+                                {% else %}⏳{% endif %}
+                            </div>
+                            <div class="step-content">
+                                <div class="step-role">{{ step.approver_role }}</div>
+                                {% if step.approver_name %}
+                                <div class="step-approver">{{ step.approver_name }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="step-status">{{ step.status|title }}</div>
+                        {% endfor %}
+                    </div>
+                    {% if action.approval_workflow.status == 'pending' %}
+                    <div class="approval-actions">
+                        <button class="btn btn-success" onclick="approveAction('{{ action.action_id }}')">
+                            ✅ Approve
+                        </button>
+                        <button class="btn btn-danger" onclick="rejectAction('{{ action.action_id }}')">
+                            ❌ Reject
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    {% if action.is_safe_to_execute %}
+                    <button class="btn btn-primary" onclick="executeAction('{{ action.action_id }}')">
+                        ▶️ Execute
+                    </button>
+                    {% endif %}
+                    <button class="btn btn-secondary" onclick="copySQL('{{ action.action_id }}')">
+                        📋 Copy SQL
+                    </button>
+                    {% if action.needs_approval and not action.approval_workflow.is_approved %}
+                    <button class="btn btn-warning" onclick="requestApproval('{{ action.action_id }}')">
+                        🛡️ Request Approval
+                    </button>
+                    {% endif %}
+                    <button class="btn btn-info" onclick="addComment('{{ action.action_id }}')">
+                        💬 Comment
+                    </button>
+                </div>
+            {% endfor %}
+        </section>
+
+        <!-- Audit Trail -->
+        <section class="audit-section">
+            <h2>📋 Audit Trail</h2>
+            <div class="audit-timeline">
+                {% for entry in audit_trail.entries %}
+                <div class="audit-entry">
+                    <div class="audit-marker"></div>
+                    <div class="audit-content">
+                        <div class="audit-header">
+                            <span class="audit-action">{{ entry.action_type|title }}</span>
+                            <span class="audit-actor">{{ entry.actor }}</span>
+                            <span class="audit-time">{{ entry.timestamp }}</span>
+                        </div>
+                        <div class="audit-details">{{ entry.details }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- Safety Summary -->
+        <footer class="safety-footer">
+            <div class="safety-summary">
+                <div class="safety-item">
+                    <span class="safety-icon">🛡️</span>
+                    <span class="safety-text">All actions have rollback plans</span>
+                </div>
+                <div class="safety-item">
+                    <span class="safety-icon">📋</span>
+                    <span class="safety-text">All approvals are logged</span>
+                </div>
+                <div class="safety-item">
+                    <span class="safety-icon">⚠️</span>
+                    <span class="safety-text">Review before executing</span>
+                </div>
+        </footer>
+    </div>
+
+    <script src="../static/js/review.js"></script>
+</body>
+</html>

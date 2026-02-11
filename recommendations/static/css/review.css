@@ -1,0 +1,968 @@
+/*
+ Recommendation Review UI Styles
+ Focused on safety, trust, and clear visual hierarchy
+*/
+
+/* ========================================
+   CSS Variables
+   ======================================== */
+
+:root {
+    /* Risk Colors */
+    --risk-low: #00CC66;
+    --risk-medium: #FFCC00;
+    --risk-high: #FFAA00;
+    --risk-critical: #FF4444;
+    
+    /* Severity Colors */
+    --severity-critical: #FF4444;
+    --severity-high: #FF6B6B;
+    --severity-medium: #FFCC00;
+    --severity-low: #00CC66;
+    --severity-info: #4488FF;
+    
+    /* UI Colors */
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --bg-card: #0f3460;
+    --bg-hover: rgba(255, 255, 255, 0.05);
+    
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --text-muted: #666;
+    
+    --border-color: #2a2a4e;
+    --border-focus: #4488FF;
+    
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+    
+    /* Transitions */
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.25s ease;
+}
+
+/* ========================================
+   Base Styles
+   ======================================== */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* ========================================
+   Review Container
+   ======================================== */
+
+.review-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-lg);
+}
+
+/* ========================================
+   Header Styles
+   ======================================== */
+
+.review-header {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-md);
+}
+
+.header-left {
+    flex: 1;
+}
+
+.review-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-primary);
+}
+
+.review-summary {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+.header-right {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    align-items: flex-end;
+}
+
+/* Badges */
+.severity-badge,
+.confidence-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.severity-badge {
+    background: var(--bg-card);
+}
+
+.severity-badge.severity-critical {
+    background: var(--severity-critical);
+    color: #fff;
+}
+
+.severity-badge.severity-high {
+    background: var(--severity-high);
+    color: #000;
+}
+
+.severity-badge.severity-medium {
+    background: var(--severity-medium);
+    color: #000;
+}
+
+.severity-badge.severity-low {
+    background: var(--severity-low);
+    color: #000;
+}
+
+.confidence-badge {
+    background: var(--bg-card);
+    color: var(--text-secondary);
+}
+
+.header-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--border-color);
+}
+
+.meta-item {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-family: 'Monaco', 'Menlo', monospace;
+}
+
+/* ========================================
+   Context Bar
+   ======================================== */
+
+.context-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-lg);
+    border: 1px solid var(--border-color);
+}
+
+.context-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.context-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.context-value {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.context-value.risk-high {
+    color: var(--risk-high);
+}
+
+/* ========================================
+   Section Headers
+   ======================================== */
+
+.actions-section h2,
+.audit-section h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-md);
+    color: var(--text-primary);
+}
+
+/* ========================================
+   Action Card
+   ======================================== */
+
+.action-card {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+    border-left: 4px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow var(--transition-normal);
+}
+
+.action-card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+/* Risk-based left border colors */
+.action-card.risk-low {
+    border-left-color: var(--risk-low);
+}
+
+.action-card.risk-medium {
+    border-left-color: var(--risk-medium);
+}
+
+.action-card.risk-high {
+    border-left-color: var(--risk-high);
+}
+
+.action-card.risk-critical {
+    border-left-color: var(--risk-critical);
+}
+
+/* Action Header */
+.action-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-md);
+}
+
+.action-title-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+}
+
+.action-priority {
+    font-size: 1.25rem;
+}
+
+.action-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.action-badges {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.risk-badge,
+.type-badge {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.risk-badge {
+    color: #000;
+}
+
+.risk-badge.risk-low {
+    background: var(--risk-low);
+}
+
+.risk-badge.risk-medium {
+    background: var(--risk-medium);
+}
+
+.risk-badge.risk-high {
+    background: var(--risk-high);
+}
+
+.risk-badge.risk-critical {
+    background: var(--risk-critical);
+    color: #fff;
+}
+
+.type-badge {
+    background: var(--bg-card);
+    color: var(--text-secondary);
+}
+
+/* Description */
+.action-description {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-md);
+}
+
+/* ========================================
+   Safety Indicators
+   ======================================== */
+
+.safety-indicators {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.indicator-icon {
+    font-size: 1rem;
+}
+
+.indicator-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.indicator-value {
+    font-weight: 600;
+}
+
+.indicator-value.risk-low {
+    color: var(--risk-low);
+}
+
+.indicator-value.risk-medium {
+    color: var(--risk-medium);
+}
+
+.indicator-value.risk-high {
+    color: var(--risk-high);
+}
+
+.indicator-value.risk-critical {
+    color: var(--risk-critical);
+}
+
+/* ========================================
+   SQL Preview Section
+   ======================================== */
+
+.sql-section {
+    margin-bottom: var(--spacing-md);
+}
+
+.sql-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+.sql-icon {
+    font-size: 0.875rem;
+}
+
+.sql-label {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.sql-badge {
+    padding: 2px 8px;
+    background: rgba(255, 68, 68, 0.2);
+    color: var(--risk-critical);
+    border-radius: var(--radius-sm);
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.sql-preview {
+    position: relative;
+    background: #0d1117;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    overflow-x: auto;
+}
+
+.sql-preview pre {
+    margin: 0;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.875rem;
+    color: #79c0ff;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.copy-btn {
+    position: absolute;
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.copy-btn:hover {
+    background: var(--border-focus);
+    border-color: var(--border-focus);
+}
+
+.copy-btn.copied {
+    background: var(--risk-low);
+    color: #000;
+}
+
+/* ========================================
+   Warnings Section
+   ======================================== */
+
+.warnings-section {
+    background: rgba(255, 170, 0, 0.1);
+    border: 1px solid var(--risk-high);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.warnings-section.warnings-danger {
+    background: rgba(255, 68, 68, 0.1);
+    border-color: var(--risk-critical);
+}
+
+.warnings-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    font-weight: 600;
+    color: var(--risk-high);
+}
+
+.warnings-section.warnings-danger .warnings-header {
+    color: var(--risk-critical);
+}
+
+.warnings-list {
+    margin: 0;
+    padding-left: var(--spacing-lg);
+}
+
+.warnings-list li {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+}
+
+/* ========================================
+   Rollback Section
+   ======================================== */
+
+.rollback-section {
+    background: rgba(0, 204, 102, 0.1);
+    border: 1px solid var(--risk-low);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.rollback-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    font-weight: 600;
+    color: var(--risk-low);
+}
+
+.rollback-risk {
+    margin-left: auto;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.rollback-risk.risk-none {
+    background: rgba(0, 204, 102, 0.2);
+    color: var(--risk-low);
+}
+
+.rollback-risk.risk-minor {
+    background: rgba(255, 204, 0, 0.2);
+    color: var(--risk-medium);
+}
+
+.rollback-risk.risk-major {
+    background: rgba(255, 68, 68, 0.2);
+    color: var(--risk-critical);
+}
+
+.rollback-command {
+    background: #0d1117;
+    padding: var(--spacing-md);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+.rollback-command code {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 0.875rem;
+    color: #7ee787;
+}
+
+.rollback-meta {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+/* ========================================
+   Approval Section
+   ======================================== */
+
+.approval-section {
+    background: rgba(68, 136, 255, 0.1);
+    border: 1px solid #4488FF;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.approval-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+    font-weight: 600;
+    color: #4488FF;
+}
+
+.approval-status {
+    margin-left: auto;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: capitalize;
+}
+
+.approval-status.status-pending {
+    background: rgba(255, 170, 0, 0.2);
+    color: var(--risk-high);
+}
+
+.approval-status.status-approved {
+    background: rgba(0, 204, 102, 0.2);
+    color: var(--risk-low);
+}
+
+.approval-status.status-rejected {
+    background: rgba(255, 68, 68, 0.2);
+    color: var(--risk-critical);
+}
+
+.approval-steps {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.approval-step {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm);
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-sm);
+}
+
+.step-marker {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+}
+
+.step-pending .step-marker {
+    background: #444;
+}
+
+.step-approved .step-marker {
+    background: var(--risk-low);
+}
+
+.step-rejected .step-marker {
+    background: var(--risk-critical);
+}
+
+.step-content {
+    flex: 1;
+}
+
+.step-role {
+    font-weight: 600;
+}
+
+.step-approver {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.step-status {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: capitalize;
+}
+
+.approval-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ========================================
+   Buttons
+   ======================================== */
+
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--border-color);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.btn-primary {
+    background: #4488FF;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #6699ff;
+}
+
+.btn-secondary {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    background: var(--border-focus);
+    border-color: var(--border-focus);
+}
+
+.btn-success {
+    background: var(--risk-low);
+    color: #000;
+}
+
+.btn-success:hover {
+    background: #00dd77;
+}
+
+.btn-danger {
+    background: var(--risk-critical);
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background: #ff6666;
+}
+
+.btn-warning {
+    background: var(--risk-high);
+    color: #000;
+}
+
+.btn-warning:hover {
+    background: #ffbb33;
+}
+
+.btn-info {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.btn-info:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ========================================
+   Audit Trail
+   ======================================== */
+
+.audit-section {
+    margin-top: var(--spacing-xl);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--border-color);
+}
+
+.audit-timeline {
+    position: relative;
+    padding-left: var(--spacing-lg);
+}
+
+.audit-timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--border-color);
+}
+
+.audit-entry {
+    position: relative;
+    padding: var(--spacing-md) 0;
+    padding-left: var(--spacing-lg);
+}
+
+.audit-marker {
+    position: absolute;
+    left: 0;
+    top: var(--spacing-md);
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+}
+
+.audit-content {
+    background: var(--bg-secondary);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+}
+
+.audit-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    font-size: 0.875rem;
+}
+
+.audit-action {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.audit-actor {
+    color: var(--text-secondary);
+}
+
+.audit-time {
+    color: var(--text-muted);
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 0.75rem;
+}
+
+.audit-details {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+/* ========================================
+   Safety Footer
+   ======================================== */
+
+.safety-footer {
+    margin-top: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.safety-summary {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-xl);
+    flex-wrap: wrap;
+}
+
+.safety-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--text-secondary);
+}
+
+.safety-icon {
+    font-size: 1.25rem;
+}
+
+/* ========================================
+   Responsive Design
+   ======================================== */
+
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+    
+    .header-right {
+        flex-direction: row;
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .action-header {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+    
+    .action-badges {
+        flex-wrap: wrap;
+    }
+    
+    .safety-indicators {
+        flex-direction: column;
+    }
+    
+    .approval-actions {
+        flex-direction: column;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .safety-summary {
+        flex-direction: column;
+        align-items: center;
+        gap: var(--spacing-md);
+    }
+}
+
+/* ========================================
+   Animation
+   ======================================== */
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+.action-card.risk-critical {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* ========================================
+   Print Styles
+   ======================================== */
+
+@media print {
+    body {
+        background: #fff;
+        color: #000;
+    }
+    
+    .review-container {
+        max-width: none;
+        padding: 0;
+    }
+    
+    .review-header,
+    .action-card,
+    .safety-footer {
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        box-shadow: none;
+    }
+    
+    .btn {
+        display: none;
+    }
+    
+    .action-buttons {
+        border-top: none;
+        padding-top: 0;
+    }
+}

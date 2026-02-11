@@ -1,0 +1,1293 @@
+{
+  "kb_version": "1.0.0",
+  "generated_at": "2026-01-27T17:27:49.052542Z",
+  "entry_count": 7,
+  "entries": [
+    {
+      "metadata": {
+        "kb_id": "kb_query_matric_20260127_172749",
+        "category": "query_performance",
+        "severity": "medium",
+        "source": "unknown",
+        "version": "1.0.0",
+        "created_at": "2026-01-27T17:27:49.052129Z",
+        "tags": [
+          "query_matric",
+          "query_performance",
+          "immediate_action_available",
+          "anomaly_detected"
+        ]
+      },
+      "problem_identity": {
+        "issue_type": "Query Latency Regression",
+        "short_description": "Severe latency regression due to planner misestimation and memory spills",
+        "symptoms": [
+          "Execution time increased 20x",
+          "Temp files created",
+          "Sequential scan on large table",
+          "High IO wait"
+        ],
+        "affected_components": [
+          "planner",
+          "executor",
+          "io",
+          "memory"
+        ]
+      },
+      "detection_signals": {
+        "metrics": {
+          "latency_deviation_factor": 20.0,
+          "cache_hit_ratio": 0.8,
+          "estimated_rows": 1000,
+          "actual_rows": 500000,
+          "temp_files_created": 1480
+        },
+        "thresholds": {
+          "latency_deviation_factor": "> 3x",
+          "row_estimation_error": "> 10x",
+          "temp_files": "> 0"
+        },
+        "anomaly_flags": {
+          "execution_time_anomaly": true,
+          "temp_usage_anomaly": true,
+          "row_estimation_anomaly": true,
+          "plan_regression_detected": true
+        },
+        "detection_method": "threshold_alert",
+        "source_queries": [
+          "SELECT query, calls, mean_time, total_time FROM pg_stat_statements ORDER BY mean_time DESC LIMIT 20"
+        ]
+      },
+      "context": {
+        "query_fingerprint": {
+          "query_hash": "0x9fbc23aa91",
+          "normalized_query": "SELECT o.id, c.name FROM orders o JOIN customers c ON o.customer_id = c.id WHERE o.created_at >= $1 AND o.status = $2",
+          "query_type": "SELECT",
+          "tables": [
+            "orders",
+            "customers"
+          ]
+        },
+        "environment": {
+          "database": "prod_pg_01",
+          "schema": "public",
+          "application": "orders-service"
+        }
+      },
+      "root_cause_analysis": {
+        "primary_cause": "Severe row estimation error leading to sequential scan and nested loop join",
+        "contributing_factors": [
+          "Outdated table statistics",
+          "Insufficient work_mem",
+          "High concurrency"
+        ]
+      },
+      "recommendations": {
+        "immediate_actions": [
+          {
+            "action": "Run ANALYZE on affected tables",
+            "sql_example": "ANALYZE orders;",
+            "risk": "low"
+          },
+          {
+            "action": "Increase work_mem for session",
+            "sql_example": "SET work_mem = '128MB';",
+            "risk": "medium"
+          }
+        ],
+        "long_term_fixes": [
+          {
+            "action": "Create index on filtering columns",
+            "config_example": "CREATE INDEX idx_orders_created_status ON orders(created_at, status);"
+          },
+          {
+            "action": "Tune autovacuum and statistics targets",
+            "config_example": "ALTER TABLE orders SET (autovacuum_analyze_scale_factor = 0.02);"
+          }
+        ],
+        "validation_steps": [
+          "Compare new execution plan with baseline",
+          "Verify index usage",
+          "Confirm temp file creation stopped",
+          "Monitor P95 latency for 24h",
+          "Compare new execution plan with baseline",
+          "Verify index usage",
+          "Confirm temp file creation stopped",
+          "Monitor P95 latency for 24h"
+        ],
+        "preventive_actions": []
+      },
+      "evidence": {
+        "query_metrics": {
+          "latency_deviation_factor": 20.0,
+          "cache_hit_ratio": 0.8,
+          "estimated_rows": 1000,
+          "actual_rows": 500000,
+          "temp_files_created": 1480
+        }
+      },
+      "confidence": {
+        "confidence_score": 0.95,
+        "confidence_reasoning": "Multiple strong signals including plan regression, row misestimation, and temp spills"
+      },
+      "impact_analysis": {
+        "latency_impact": "P95 latency increased from 500ms to 10.8s",
+        "resource_pressure": [
+          "io",
+          "memory",
+          "cpu"
+        ],
+        "blast_radius": "high"
+      }
+    },
+    {
+      "metadata": {
+        "kb_id": "kb_index_health_20260127_172749",
+        "category": "index_health",
+        "severity": "medium",
+        "source": "pg_stat_user_indexes",
+        "version": "1.0",
+        "created_at": "2026-01-27T00:00:00Z",
+        "tags": [
+          "index_health",
+          "index_health",
+          "immediate_action_available",
+          "anomaly_detected"
+        ]
+      },
+      "problem_identity": {
+        "issue_type": "Index Bloat and Low Usage",
+        "short_description": "Index idx_orders_customer_id shows high bloat and low usage ratio",
+        "symptoms": [
+          "Index size larger than expected",
+          "Low idx_scan count relative to table size",
+          "High sequential scans on orders table"
+        ],
+        "affected_components": [
+          "storage",
+          "index_manager",
+          "planner"
+        ]
+      },
+      "detection_signals": {
+        "metrics": {
+          "idx_scan": 420,
+          "seq_scan": 182000,
+          "index_size_mb": 256,
+          "table_size_mb": 512,
+          "bloat_ratio": 0.5
+        },
+        "thresholds": {
+          "idx_scan_ratio": "< 0.1",
+          "bloat_ratio": "> 0.3"
+        },
+        "anomaly_flags": {
+          "unused_index": true,
+          "bloated_index": true,
+          "sequential_scan_preferred": true
+        },
+        "detection_method": "threshold_alert",
+        "source_queries": [
+          "SELECT indexrelname, idx_scan, idx_tup_read, idx_tup_fetch, pg_relation_size(indexrelid) FROM pg_stat_user_indexes"
+        ]
+      },
+      "context": {
+        "query_fingerprint": {},
+        "environment": {
+          "database": "prod_pg_01",
+          "schema": "public",
+          "application": "orders-service"
+        }
+      },
+      "root_cause_analysis": {
+        "primary_cause": "Index bloat from UPDATE operations and underutilization of the index",
+        "contributing_factors": [
+          "High UPDATE activity on orders table",
+          "VACUUM not keeping up with bloat",
+          "Query patterns not leveraging the index"
+        ]
+      },
+      "recommendations": {
+        "immediate_actions": [
+          {
+            "action": "Run REINDEX CONCURRENTLY to remove bloat",
+            "sql_example": "REINDEX CONCURRENTLY idx_orders_customer_id;",
+            "risk": "medium"
+          }
+        ],
+        "long_term_fixes": [
+          {
+            "action": "Review and optimize queries to use the index",
+            "priority": "high"
+          },
+          {
+            "action": "Consider dropping unused index if no queries benefit",
+            "sql_example": "DROP INDEX CONCURRENTLY idx_orders_customer_id;",
+            "priority": "medium"
+          },
+          {
+            "action": "Run REINDEX to remove index bloat",
+            "sql_example": "REINDEX INDEX index_name;",
+            "priority": "high"
+          },
+          {
+            "action": "Consider using REINDEX CONCURRENTLY for zero-downtime reindexing",
+            "priority": "medium"
+          }
+        ],
+        "validation_steps": [
+          "Verify index size decreased after REINDEX",
+          "Monitor idx_scan vs seq_scan ratio",
+          "Check query performance improvement"
+        ],
+        "preventive_actions": []
+      },
+      "evidence": {
+        "evidence": {
+          "index_statistics": [
+            {
+              "index_name": "idx_orders_customer_id",
+              "table_name": "orders",
+              "idx_scan": 420,
+              "idx_tup_read": 82000,
+              "idx_tup_fetch": 410,
+              "index_size_mb": 256,
+              "bloat_estimate_mb": 128,
+              "dead_index_tuples": 45000
+            }
+          ],
+          "table_statistics": [
+            {
+              "table_name": "orders",
+              "table_size_mb": 512,
+              "seq_scan": 182000,
+              "idx_scan": 9400
+            }
+          ]
+        }
+      },
+      "confidence": {
+        "confidence_score": 0.85,
+        "confidence_reasoning": "Index statistics clearly show bloat and low usage patterns"
+      }
+    },
+    {
+      "metadata": {
+        "kb_id": "kb_locking_analysis_20260127_172749",
+        "category": "locking",
+        "severity": "high",
+        "source": "pg_stat_activity",
+        "version": "1.0",
+        "created_at": "2026-01-27T00:00:00Z",
+        "tags": [
+          "locking_analysis",
+          "locking",
+          "immediate_action_available",
+          "anomaly_detected"
+        ]
+      },
+      "problem_identity": {
+        "issue_type": "Blocking Transaction Detected",
+        "short_description": "Long-running blocking transaction causing query performance degradation",
+        "symptoms": [
+          "Query waiting on lock for extended period",
+          "Wait event type: Lock",
+          "Blocked PID: 34121, Blocking PID: 33218"
+        ],
+        "affected_components": [
+          "lock_manager",
+          "executor",
+          "transaction_manager"
+        ]
+      },
+      "detection_signals": {
+        "metrics": {
+          "blocked_pid": 34121,
+          "blocking_pid": 33218,
+          "wait_duration_seconds": 180,
+          "blocked_query_duration_ms": 10200
+        },
+        "thresholds": {
+          "wait_duration_seconds": "> 60",
+          "blocked_query_duration_ms": "> 5000"
+        },
+        "anomaly_flags": {
+          "blocking_detected": true,
+          "long_running_blocker": true,
+          "lock_wait_timeout_risk": true
+        },
+        "detection_method": "threshold_alert",
+        "source_queries": [
+          "SELECT pid, usename, application_name, state, wait_event, query FROM pg_stat_activity WHERE wait_event IS NOT NULL"
+        ]
+      },
+      "context": {
+        "query_fingerprint": {
+          "query_hash": "0xblocked123",
+          "query_type": "SELECT"
+        },
+        "environment": {
+          "database": "prod_pg_01",
+          "schema": "public",
+          "application": "orders-service"
+        }
+      },
+      "root_cause_analysis": {
+        "primary_cause": "Long-running UPDATE transaction holding RowExclusiveLock",
+        "contributing_factors": [
+          "No statement_timeout set",
+          "Application not handling transactions properly",
+          "Large batch UPDATE without proper batching"
+        ]
+      },
+      "recommendations": {
+        "immediate_actions": [
+          {
+            "action": "Identify and analyze blocking transaction",
+            "sql_example": "SELECT pid, usename, application_name, state, query, query_start FROM pg_stat_activity WHERE pid = 33218;",
+            "risk": "low"
+          },
+          {
+            "action": "Consider terminating long-running blocking query",
+            "sql_example": "SELECT pg_terminate_backend(33218);",
+            "risk": "high",
+            "estimated_downtime": "transaction rollback"
+          },
+          {
+            "action": "Identify and analyze blocking transaction",
+            "risk": "medium"
+          },
+          {
+            "action": "Consider terminating long-running blocking query",
+            "sql_example": "SELECT pg_terminate_backend(pid);",
+            "risk": "high"
+          }
+        ],
+        "long_term_fixes": [
+          {
+            "action": "Set statement_timeout to prevent long-running queries",
+            "config_example": "ALTER SYSTEM SET statement_timeout = '30s'; SELECT pg_reload_conf();",
+            "priority": "critical"
+          },
+          {
+            "action": "Implement proper transaction handling in application",
+            "priority": "high"
+          },
+          {
+            "action": "Use batch processing for large updates",
+            "priority": "medium"
+          },
+          {
+            "action": "Consider using FOR UPDATE SKIP LOCKED for concurrent updates",
+            "priority": "medium"
+          }
+        ],
+        "validation_steps": [
+          "Verify blocking transaction is resolved",
+          "Monitor lock wait times",
+          "Check for recurring blocking patterns"
+        ],
+        "preventive_actions": [
+          "Set up alerting for lock waits > 30 seconds",
+          "Monitor pg_stat_activity for long-running transactions",
+          "Implement connection pool query timeouts"
+        ]
+      },
+      "evidence": {
+        "evidence": {
+          "locking_details": {
+            "blocked_pid": 34121,
+            "blocking_pid": 33218,
+            "wait_event_type": "Lock",
+            "wait_event": "RowExclusiveLock",
+            "blocked_query": "SELECT o.id, c.name FROM orders o JOIN customers c ON o.customer_id = c.id WHERE o.created_at >= $1 AND o.status = $2",
+            "blocking_query": "UPDATE orders SET status = 'CLOSED' WHERE updated_at < '2026-01-01'",
+            "blocked_query_start": "2026-01-27T10:14:23Z",
+            "lock_type": "RowExclusiveLock",
+            "lock_mode": "ShareLock"
+          },
+          "transaction_details": {
+            "blocking_session_duration_seconds": 300,
+            "blocked_session_wait_seconds": 180,
+            "rows_modified_by_blocker": 50000
+          }
+        }
+      },
+      "confidence": {
+        "confidence_score": 0.92,
+        "confidence_reasoning": "Clear evidence from pg_stat_activity showing blocking relationship"
+      },
+      "impact_analysis": {
+        "latency_impact": "Blocked query execution time: 10.2s (vs 500ms expected)",
+        "resource_pressure": [
+          "cpu",
+          "memory"
+        ],
+        "blast_radius": "medium",
+        "blocked_query": "SELECT o.id, c.name FROM orders o JOIN customers c ON o.customer_id = c.id WHERE o.created_at >= $1",
+        "blocking_query": "UPDATE orders SET status = 'CLOSED' WHERE updated_at < $1"
+      }
+    },
+    {
+      "metadata": {
+        "kb_id": "kb_maintenance_checks_20260127_172749",
+        "category": "maintenance",
+        "severity": "high",
+        "source": "pg_stat_user_tables",
+        "version": "1.0",
+        "created_at": "2026-01-27T00:00:00Z",
+        "tags": [
+          "maintenance_checks",
+          "maintenance",
+          "immediate_action_available",
+          "anomaly_detected"
+        ]
+      },
+      "problem_identity": {
+        "issue_type": "Stale Statistics and High Dead Tuples",
+        "short_description": "Orders table has stale statistics and high dead tuple ratio requiring VACUUM/ANALYZE",
+        "symptoms": [
+          "Last ANALYZE was 22 days ago",
+          "Dead tuple ratio: 45% (threshold: 20%)",
+          "High table bloat detected",
+          "Sequential scans preferred over index scans"
+        ],
+        "affected_components": [
+          "vacuum",
+          "analyze",
+          "planner",
+          "storage"
+        ]
+      },
+      "detection_signals": {
+        "metrics": {
+          "dead_tuple_ratio": 0.45,
+          "days_since_analyze": 22,
+          "days_since_vacuum": 42,
+          "table_bloat_percent": 65,
+          "n_dead_tup": 1840000,
+          "n_live_tup": 2250000
+        },
+        "thresholds": {
+          "dead_tuple_ratio": "> 0.20",
+          "days_since_analyze": "> 7",
+          "days_since_vacuum": "> 30"
+        },
+        "anomaly_flags": {
+          "stale_statistics": true,
+          "high_dead_tuples": true,
+          "vacuum_lag": true,
+          "table_bloat": true
+        },
+        "detection_method": "threshold_alert",
+        "source_queries": [
+          "SELECT schemaname, tablename, n_dead_tup, n_live_tup, last_vacuum, last_analyze FROM pg_stat_user_tables"
+        ]
+      },
+      "context": {
+        "query_fingerprint": {},
+        "environment": {
+          "database": "prod_pg_01",
+          "schema": "public",
+          "application": "orders-service"
+        }
+      },
+      "root_cause_analysis": {
+        "primary_cause": "Autovacuum not keeping pace with table modification rate",
+        "contributing_factors": [
+          "High UPDATE/DELETE frequency on orders table",
+          "Autovacuum thresholds too conservative",
+          "Autovacuum workers occupied by other tables",
+          "No manual VACUUM scheduled during maintenance window"
+        ]
+      },
+      "recommendations": {
+        "immediate_actions": [
+          {
+            "action": "Run VACUUM (VERBOSE) ANALYZE on orders table",
+            "sql_example": "VACUUM (VERBOSE, ANALYZE) orders;",
+            "risk": "low",
+            "estimated_downtime": "none"
+          },
+          {
+            "action": "Monitor progress during operation",
+            "sql_example": "SELECT * FROM pg_stat_progress_vacuum;",
+            "risk": "low"
+          },
+          {
+            "action": "Run VACUUM ANALYZE on affected tables",
+            "sql_example": "VACUUM (VERBOSE) ANALYZE table_name;",
+            "risk": "low"
+          }
+        ],
+        "long_term_fixes": [
+          {
+            "action": "Tune autovacuum for high-churn table",
+            "config_example": "ALTER TABLE orders SET (autovacuum_vacuum_scale_factor = 0.01, autovacuum_vacuum_cost_delay = 2, autovacuum_naptime = '10s');",
+            "priority": "critical"
+          },
+          {
+            "action": "Enable ANALYZE on every VACUUM",
+            "config_example": "ALTER TABLE orders SET (autovacuum_analyze_scale_factor = 0.01);",
+            "priority": "high"
+          },
+          {
+            "action": "Schedule manual VACUUM ANALYZE during maintenance window",
+            "priority": "medium"
+          },
+          {
+            "action": "Consider table partitioning if high churn continues",
+            "priority": "low"
+          },
+          {
+            "action": "Tune autovacuum settings",
+            "config_example": "ALTER SYSTEM SET autovacuum_max_workers = 4;",
+            "priority": "high"
+          },
+          {
+            "action": "Schedule regular VACUUM ANALYZE during maintenance window",
+            "priority": "medium"
+          }
+        ],
+        "validation_steps": [
+          "Verify dead tuple ratio dropped below 20%",
+          "Confirm last_analyze timestamp updated",
+          "Check planner row estimates improved",
+          "Monitor query execution time improvement"
+        ],
+        "preventive_actions": [
+          "Set up alerting for dead_tuple_ratio > 20%",
+          "Alert when days_since_analyze > 7",
+          "Monitor autovacuum worker saturation",
+          "Track VACUUM progress with pg_stat_progress_vacuum"
+        ]
+      },
+      "evidence": {
+        "evidence": {
+          "table_statistics": [
+            {
+              "table_name": "orders",
+              "n_live_tup": 2250000,
+              "n_dead_tup": 1840000,
+              "dead_tuple_ratio": 0.45,
+              "last_vacuum": "2025-12-15T02:12:00Z",
+              "last_autovacuum": "2026-01-10T04:18:00Z",
+              "last_analyze": "2026-01-05T01:10:00Z",
+              "table_size_mb": 2048,
+              "table_bloat_mb": 1331,
+              "autovacuum_count": 12,
+              "autoanalyze_count": 8
+            },
+            {
+              "table_name": "customers",
+              "n_live_tup": 500000,
+              "n_dead_tup": 12000,
+              "dead_tuple_ratio": 0.02,
+              "last_vacuum": "2026-01-20T02:05:00Z",
+              "last_autovacuum": "2026-01-26T03:55:00Z",
+              "last_analyze": "2026-01-26T03:55:00Z",
+              "table_size_mb": 256,
+              "table_bloat_mb": 5
+            }
+          ],
+          "autovacuum_settings": {
+            "autovacuum_vacuum_threshold": 50,
+            "autovacuum_vacuum_scale_factor": 0.2,
+            "autovacuum_analyze_threshold": 50,
+            "autovacuum_analyze_scale_factor": 0.1,
+            "autovacuum_naptime": "60s",
+            "autovacuum_max_workers": 3
+          },
+          "diagnostic_hints": [
+            "High dead tuples detected on orders table",
+            "Analyze timestamp is stale (22 days old)",
+            "Table bloat estimated at 65%",
+            "Autovacuum not triggered frequently enough"
+          ]
+        }
+      },
+      "confidence": {
+        "confidence_score": 0.95,
+        "confidence_reasoning": "Direct evidence from pg_stat_user_tables showing statistics age and dead tuple ratio"
+      },
+      "impact_analysis": {
+        "latency_impact": "Planner row estimation error: 500x",
+        "resource_pressure": [
+          "io",
+          "storage",
+          "memory"
+        ],
+        "blast_radius": "high",
+        "impact_details": {
+          "query_plan_quality": "degraded",
+          "table_scan_efficiency": "low",
+          "index_usage": "reduced"
+        }
+      }
+    },
+    {
+      "metadata": {
+        "kb_id": "kb_configuration_parameters_20260127_172749",
+        "category": "configuration",
+        "severity": "high",
+        "source": "pg_settings",
+        "version": "1.0",
+        "created_at": "2026-01-27T00:00:00Z",
+        "tags": [
+          "configuration_parameters",
+          "configuration",
+          "immediate_action_available",
+          "anomaly_detected"
+        ]
+      },
+      "problem_identity": {
+        "issue_type": "Suboptimal Configuration Parameters",
+        "short_description": "work_mem too low causing temp file spills, buffer cache hit ratio below optimal",
+        "symptoms": [
+          "Temp files created during query execution",
+          "Low buffer cache hit ratio (80% vs 95% target)",
+          "High IO wait due to temp file writes",
+          "Hash join spills to disk"
+        ],
+        "affected_components": [
+          "memory_manager",
+          "buffer_pool",
+          "io_manager",
+          "executor"
+        ]
+      },
+      "detection_signals": {
+        "metrics": {
+          "work_mem_mb": 4,
+          "shared_buffers_mb": 16384,
+          "effective_cache_size_mb": 49152,
+          "temp_file_count": 1480,
+          "temp_file_size_mb": 2048,
+          "cache_hit_ratio": 0.8,
+          "io_wait_percent": 28
+        },
+        "thresholds": {
+          "work_mem_mb": "< 64",
+          "cache_hit_ratio": "< 0.95",
+          "temp_files": "> 0",
+          "io_wait_percent": "> 20"
+        },
+        "anomaly_flags": {
+          "work_mem_too_low": true,
+          "cache_hit_degraded": true,
+          "temp_spill_detected": true,
+          "io_pressure": true
+        },
+        "detection_method": "threshold_alert",
+        "source_queries": []
+      },
+      "context": {
+        "query_fingerprint": {},
+        "environment": {
+          "database": "prod_pg_01",
+          "schema": "public",
+          "application": "orders-service",
+          "pg_version": "15.2"
+        }
+      },
+      "root_cause_analysis": {
+        "primary_cause": "Insufficient work_mem causing disk-based operations for sorts and hashes",
+        "contributing_factors": [
+          "Default work_mem is too conservative",
+          "Queries performing large sorts/hash joins",
+          "Shared buffers too small for working set",
+          "No query optimization for memory usage"
+        ]
+      },
+      "recommendations": {
+        "immediate_actions": [
+          {
+            "action": "Increase work_mem for current session",
+            "sql_example": "SET work_mem = '256MB';",
+            "risk": "medium"
+          },
+          {
+            "action": "Reload configuration",
+            "sql_example": "SELECT pg_reload_conf();",
+            "risk": "low"
+          }
+        ],
+        "long_term_fixes": [
+          {
+            "action": "Increase work_mem globally",
+            "config_example": "ALTER SYSTEM SET work_mem = '64MB';",
+            "priority": "critical"
+          },
+          {
+            "action": "Increase shared_buffers",
+            "config_example": "ALTER SYSTEM SET shared_buffers = '24GB'; -- 25% of RAM",
+            "priority": "high"
+          },
+          {
+            "action": "Set effective_cache_size appropriately",
+            "config_example": "ALTER SYSTEM SET effective_cache_size = '48GB'; -- 75% of RAM",
+            "priority": "high"
+          },
+          {
+            "action": "Tune work_mem per connection using session parameters",
+            "priority": "medium"
+          },
+          {
+            "action": "Consider using huge_pages for large shared_buffers",
+            "config_example": "ALTER SYSTEM SET huge_pages = 'on';",
+            "priority": "low"
+          }
+        ],
+        "validation_steps": [
+          "Verify temp file count decreased",
+          "Monitor cache hit ratio improvement",
+          "Check IO wait percentage reduction",
+          "Confirm query latency returned to baseline"
+        ],
+        "preventive_actions": [
+          "Monitor temp_file generation rate",
+          "Alert when cache_hit_ratio < 90%",
+          "Track work_mem usage per query",
+          "Regular configuration health checks"
+        ]
+      },
+      "evidence": {
+        "evidence": {
+          "configuration_values": {
+            "work_mem_mb": 4,
+            "shared_buffers_mb": 16384,
+            "effective_cache_size_mb": 49152,
+            "maintenance_work_mem_mb": 256,
+            "max_connections": 200,
+            "max_parallel_workers_per_gather": 2,
+            "work_mem_recommended_mb": 64,
+            "shared_buffers_recommended_mb": 24576
+          },
+          "key_ratios": {
+            "buffer_cache_hit_ratio": 0.8,
+            "cache_hit_target": 0.95,
+            "shared_buffers_to_ram_ratio": 0.25,
+            "effective_cache_hit_ratio": 0.65
+          },
+          "temp_usage": {
+            "temp_files_created": 1480,
+            "temp_bytes_written": 2147483648,
+            "temp_files_per_query": 50
+          },
+          "io_metrics": {
+            "io_wait_percent": 28,
+            "disk_read_iops": 4500,
+            "disk_write_iops": 2800,
+            "disk_latency_ms": 15
+          }
+        }
+      },
+      "confidence": {
+        "confidence_score": 0.88,
+        "confidence_reasoning": "Configuration values clearly indicate suboptimal settings, confirmed by temp file evidence"
+      },
+      "impact_analysis": {
+        "latency_impact": "Query latency increased due to temp file IO",
+        "resource_pressure": [
+          "io",
+          "memory",
+          "cpu"
+        ],
+        "blast_radius": "medium",
+        "impact_details": {
+          "io_throughput_reduction": "40%",
+          "temp_storage_usage": "2GB",
+          "query_execution_increase": "10x"
+        }
+      }
+    },
+    {
+      "metadata": {
+        "kb_id": "kb_application_impact_20260127_172749",
+        "category": "application_impact",
+        "severity": "critical",
+        "source": "application_metrics",
+        "version": "1.0",
+        "created_at": "2026-01-27T00:00:00Z",
+        "tags": [
+          "application_impact",
+          "application_impact",
+          "immediate_action_available",
+          "anomaly_detected"
+        ]
+      },
+      "problem_identity": {
+        "issue_type": "Application Performance Degradation",
+        "short_description": "Critical API latency increase and error rate spike due to database performance issues",
+        "symptoms": [
+          "API P95 latency increased from 500ms to 4800ms",
+          "Error rate increased to 6.2%",
+          "Connection pool saturation (198/200)",
+          "HTTP 503 errors reported",
+          "Timeout exceptions in application logs"
+        ],
+        "affected_components": [
+          "api_gateway",
+          "connection_pool",
+          "database_driver",
+          "application_layer"
+        ]
+      },
+      "detection_signals": {
+        "metrics": {
+          "api_latency_p95_ms": 4800,
+          "api_latency_p50_ms": 1200,
+          "error_rate_percent": 6.2,
+          "requests_per_second": 500,
+          "timeout_count_per_minute": 45,
+          "connection_pool_active": 198,
+          "connection_pool_idle": 2,
+          "connection_pool_wait_count": 150
+        },
+        "thresholds": {
+          "api_latency_p95_ms": "> 1000",
+          "error_rate_percent": "> 1.0",
+          "connection_pool_usage": "> 0.90",
+          "timeout_count_per_minute": "> 10"
+        },
+        "anomaly_flags": {
+          "latency_spike": true,
+          "error_rate_spike": true,
+          "connection_pool_saturation": true,
+          "timeout_storm": true,
+          "retry_storm": true
+        },
+        "detection_method": "threshold_alert",
+        "source_queries": []
+      },
+      "context": {
+        "query_fingerprint": {},
+        "environment": {
+          "database": "prod_pg_01",
+          "schema": "public",
+          "application": "orders-service",
+          "host": "app-prod-01.internal",
+          "environment": "production"
+        }
+      },
+      "root_cause_analysis": {
+        "primary_cause": "Database query latency increase causing cascading application failures",
+        "contributing_factors": [
+          "Query performance regression (20x slower)",
+          "Connection pool exhaustion",
+          "Retry storms amplifying load",
+          "Timeout configuration too long"
+        ]
+      },
+      "recommendations": {
+        "immediate_actions": [
+          {
+            "action": "Increase connection pool size",
+            "config_example": "max_pool_size=300 in application config",
+            "risk": "medium"
+          },
+          {
+            "action": "Implement circuit breaker pattern",
+            "priority": "high",
+            "risk": "medium"
+          },
+          {
+            "action": "Reduce query timeout in application",
+            "config_example": "query_timeout=5000ms",
+            "risk": "low"
+          },
+          {
+            "action": "Scale up application instances to handle retry load",
+            "risk": "medium"
+          }
+        ],
+        "long_term_fixes": [
+          {
+            "action": "Fix underlying database query performance",
+            "priority": "critical"
+          },
+          {
+            "action": "Implement query timeout and cancellation",
+            "config_example": "statement_timeout='30s'",
+            "priority": "high"
+          },
+          {
+            "action": "Add read replicas for read-heavy queries",
+            "priority": "medium"
+          },
+          {
+            "action": "Implement query result caching",
+            "priority": "medium"
+          },
+          {
+            "action": "Optimize connection pool configuration",
+            "config_example": "min_size=20, max_size=100, idle_timeout=300s",
+            "priority": "high"
+          }
+        ],
+        "validation_steps": [
+          "Verify API latency returned to < 500ms P95",
+          "Confirm error rate dropped below 0.5%",
+          "Monitor connection pool utilization",
+          "Check retry storm has subsided"
+        ],
+        "preventive_actions": [
+          "Set up SLA monitoring for API latency",
+          "Alert when connection pool > 80%",
+          "Implement circuit breaker dashboards",
+          "Rate limit retries to prevent storms",
+          "Regular load testing with production data"
+        ]
+      },
+      "evidence": {
+        "query_metrics": {},
+        "table_statistics": [],
+        "index_statistics": [],
+        "locking_details": {},
+        "configuration_values": {},
+        "hardware_metrics": {}
+      },
+      "confidence": {
+        "confidence_score": 0.94,
+        "confidence_reasoning": "Direct correlation between database query latency and application metrics"
+      },
+      "impact_analysis": {
+        "latency_impact": "API P95: 4800ms (9.6x increase from 500ms baseline)",
+        "throughput_impact": "Requests/second dropped from 1000 to 500 (50% reduction)",
+        "resource_pressure": [
+          "connection_pool",
+          "database",
+          "api_servers"
+        ],
+        "blast_radius": "critical",
+        "business_impact": {
+          "affected_users": 15000,
+          "revenue_impact_per_hour": "$15000",
+          "sla_breach": true,
+          "support_tickets_increased": "500%"
+        },
+        "application_impact": {
+          "http_503_count": 1200,
+          "http_504_count": 450,
+          "connection_timeout_count": 890,
+          "database_error_count": 340
+        }
+      }
+    },
+    {
+      "metadata": {
+        "kb_id": "kb_add_index_fix_20260127_172749",
+        "category": "general",
+        "severity": "medium",
+        "source": "unknown",
+        "version": "1.0.0",
+        "created_at": "2026-01-27T17:27:49.052530Z",
+        "tags": [
+          "add_index_fix",
+          "general"
+        ]
+      },
+      "problem_identity": {
+        "issue_type": "Unknown Issue",
+        "short_description": "CRITICAL: Query ID 123 execution time exceeded baseline",
+        "symptoms": [],
+        "affected_components": [],
+        "long_description": "Application latency spike and API timeouts reported"
+      },
+      "detection_signals": {
+        "metrics": {
+          "calls": 18420,
+          "mean_time_ms": 9800,
+          "total_time_ms": 180516000,
+          "rows_returned": 250,
+          "shared_blks_hit": 1520000,
+          "shared_blks_read": 380000,
+          "temp_blks_written": 64000
+        },
+        "anomaly_flags": {
+          "execution_time_anomaly": true,
+          "query_detected": true
+        },
+        "detection_method": "pg_stat_statements_analysis",
+        "source_queries": []
+      },
+      "context": {
+        "environment": {
+          "database": "prod_pg_01",
+          "schema": "public"
+        },
+        "tables_involved": [
+          "orders",
+          "customers"
+        ]
+      },
+      "root_cause_analysis": {
+        "primary_cause": "statistics_and_vacuum_issue",
+        "contributing_factors": [
+          "work_mem too low",
+          "blocking transaction present"
+        ]
+      },
+      "recommendations": {
+        "immediate_actions": [
+          {
+            "action": "Terminate blocking transaction",
+            "risk": "low"
+          },
+          {
+            "action": "Run ANALYZE on orders table",
+            "risk": "low"
+          }
+        ],
+        "long_term_fixes": [
+          {
+            "action": "Tune autovacuum thresholds",
+            "priority": "medium"
+          },
+          {
+            "action": "Increase work_mem",
+            "priority": "medium"
+          },
+          {
+            "action": "Reindex bloated index",
+            "priority": "medium"
+          },
+          {
+            "action": "REINDEX CONCURRENTLY idx_orders_customer_id",
+            "priority": "medium"
+          }
+        ],
+        "validation_steps": [],
+        "preventive_actions": [
+          "Alert on stale statistics",
+          "Monitor plan changes",
+          "Track temp file growth"
+        ]
+      },
+      "evidence": {
+        "incident_metadata": {
+          "incident_id": "INC-POSTGRES-QUERY-0001",
+          "incident_type": "query_performance_degradation",
+          "severity": "P1",
+          "first_detected_utc": "2026-01-27T10:14:23Z",
+          "status": "ongoing",
+          "duration_minutes": 12
+        },
+        "alert": {
+          "subject": "CRITICAL: Query ID 123 execution time exceeded baseline",
+          "alert_body": {
+            "query_id": "123",
+            "database": "prod_pg_01",
+            "schema": "public",
+            "tables_involved": [
+              "orders",
+              "customers"
+            ],
+            "expected_runtime_ms": 500,
+            "current_runtime_ms": 10200,
+            "deviation_factor": 20,
+            "impact_summary": "Application latency spike and API timeouts reported"
+          },
+          "threshold_definition": {
+            "baseline_window_days": 14,
+            "metric": "p95_execution_time",
+            "alert_condition": "execution_time > 3x baseline for 5 consecutive minutes"
+          }
+        },
+        "query_metrics": {
+          "source": "pg_stat_statements",
+          "metrics": {
+            "calls": 18420,
+            "mean_time_ms": 9800,
+            "total_time_ms": 180516000,
+            "rows_returned": 250,
+            "shared_blks_hit": 1520000,
+            "shared_blks_read": 380000,
+            "temp_blks_written": 64000
+          },
+          "observations": [
+            "Execution time significantly increased",
+            "High temporary block writes detected"
+          ]
+        },
+        "table_statistics": {
+          "source": "pg_stat_user_tables",
+          "tables": [
+            {
+              "table_name": "orders",
+              "n_dead_tup": 1840000,
+              "last_vacuum": "2025-12-15T02:12:00Z",
+              "last_autovacuum": "2026-01-10T04:18:00Z",
+              "last_analyze": "2026-01-05T01:10:00Z",
+              "seq_scan": 182000,
+              "idx_scan": 9400
+            },
+            {
+              "table_name": "customers",
+              "n_dead_tup": 12000,
+              "last_vacuum": "2026-01-20T02:05:00Z",
+              "last_autovacuum": "2026-01-26T03:55:00Z",
+              "last_analyze": "2026-01-26T03:55:00Z",
+              "seq_scan": 120,
+              "idx_scan": 18200
+            }
+          ],
+          "diagnostic_hints": [
+            "High dead tuples detected on orders table",
+            "Analyze timestamp is stale"
+          ]
+        },
+        "index_health": {
+          "source": "pg_stat_user_indexes",
+          "indexes": [
+            {
+              "table_name": "orders",
+              "index_name": "idx_orders_customer_id",
+              "idx_scan": 420,
+              "idx_tup_read": 82000,
+              "idx_tup_fetch": 410
+            }
+          ],
+          "observations": [
+            "Index exists but rarely used",
+            "Planner may be choosing sequential scan"
+          ]
+        },
+        "locking_analysis": {
+          "blocking_detected": true,
+          "blocked_queries": [
+            {
+              "blocked_pid": 34121,
+              "blocking_pid": 33218,
+              "blocked_query": "SELECT ... FROM orders JOIN customers ...",
+              "blocking_query": "UPDATE orders SET status = 'CLOSED' WHERE ..."
+            }
+          ],
+          "wait_event_type": "Lock",
+          "reasoning": "Query waiting on lock, not actively consuming CPU"
+        },
+        "application_impact": {
+          "api_latency_ms_p95": 4800,
+          "error_rate_percent": 6.2,
+          "connection_pool": {
+            "max_connections": 200,
+            "active_connections": 198,
+            "idle_connections": 2
+          },
+          "observations": [
+            "Connection pool saturation detected",
+            "Retry storm likely increasing database load"
+          ]
+        },
+        "query_termination": {
+          "termination_considered": true,
+          "preconditions": {
+            "blocking_query_identified": true,
+            "application_team_approval": true,
+            "business_approval": true,
+            "rollback_risk_understood": true
+          },
+          "termination_command": "SELECT pg_terminate_backend(33218);",
+          "termination_type": "graceful"
+        },
+        "maintenance_checks": {
+          "vacuum_analyze": {
+            "required": true,
+            "actions": [
+              "ANALYZE orders;",
+              "VACUUM (VERBOSE) orders;"
+            ]
+          },
+          "bloat_indicators": {
+            "table_size_growth": "unexpected",
+            "dead_tuple_ratio": "high",
+            "index_size_larger_than_table": true
+          },
+          "recommended_actions": [
+            "REINDEX CONCURRENTLY idx_orders_customer_id"
+          ]
+        },
+        "configuration_parameters": {
+          "work_mem_mb": 4,
+          "shared_buffers_mb": 16384,
+          "effective_cache_size_mb": 49152,
+          "max_connections": 200,
+          "checkpoint_timeout_min": 5,
+          "key_ratios": {
+            "buffer_cache_hit_ratio": 0.8,
+            "commit_ratio": 0.92
+          },
+          "observations": [
+            "Low work_mem causing disk spills",
+            "Buffer cache hit ratio below recommended threshold"
+          ]
+        },
+        "execution_plan_analysis": {
+          "plan_type": "EXPLAIN ANALYZE",
+          "estimated_rows": 1000,
+          "actual_rows": 500000,
+          "estimated_cost": 8200,
+          "actual_time_ms": 10200,
+          "issues_detected": [
+            "Severe row estimation mismatch",
+            "Sequential scan chosen over index scan"
+          ]
+        },
+        "application_context_questions": [
+          "When was this query last performing within SLA?",
+          "Was there any recent application or ORM deployment?",
+          "Were there any schema or index changes?",
+          "Any new batch jobs or reporting queries started?",
+          "Has traffic volume increased recently?"
+        ],
+        "hardware_capacity": {
+          "cpu_utilization_percent": 35,
+          "load_average": 1.2,
+          "memory_free_gb": 2.1,
+          "swap_used": true,
+          "disk_io_wait_percent": 28,
+          "interpretation": [
+            "CPU not saturated",
+            "High I/O wait indicates disk pressure"
+          ]
+        },
+        "resolution": {
+          "immediate_fix": [
+            "Terminate blocking transaction",
+            "Run ANALYZE on orders table"
+          ],
+          "permanent_fix": [
+            "Tune autovacuum thresholds",
+            "Increase work_mem",
+            "Reindex bloated index"
+          ],
+          "preventive_actions": [
+            "Alert on stale statistics",
+            "Monitor plan changes",
+            "Track temp file growth"
+          ]
+        }
+      },
+      "confidence": {
+        "confidence_score": 0.85,
+        "confidence_reasoning": "Analysis based on PostgreSQL statistics and metrics",
+        "evidence_count": 1
+      },
+      "impact_analysis": {
+        "application_impact": {
+          "api_latency_ms_p95": 4800,
+          "error_rate_percent": 6.2,
+          "connection_pool": {
+            "max_connections": 200,
+            "active_connections": 198,
+            "idle_connections": 2
+          },
+          "observations": [
+            "Connection pool saturation detected",
+            "Retry storm likely increasing database load"
+          ]
+        }
+      }
+    }
+  ]
+}

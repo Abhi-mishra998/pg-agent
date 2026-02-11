@@ -1,0 +1,104 @@
+{
+  "card_id": "rc_0e6ec9ed",
+  "incident_id": null,
+  "title": "Test",
+  "summary": "",
+  "category": "",
+  "severity": "medium",
+  "actions": [
+    {
+      "action_id": "ra_73beab6f",
+      "action_type": "",
+      "title": "Action 1",
+      "description": "",
+      "sql_command": null,
+      "config_change": null,
+      "validation_command": null,
+      "priority": "medium",
+      "estimated_duration": "",
+      "risk": "low",
+      "risk_indicators": {
+        "risk_level": "low",
+        "severity_badge": "\ud83d\udfe2 LOW",
+        "color_code": "#00CC66",
+        "risk_summary": "",
+        "risk_details": []
+      },
+      "safety_warnings": {
+        "is_destructive": false
+      },
+      "operation_mode": "online",
+      "requires_maintenance_window": false,
+      "requires_approval": true,
+      "approval_workflow": {
+        "workflow_id": "wf_5fc09ed8",
+        "action_id": "act_test",
+        "steps": [
+          {
+            "step_id": "step_aa153699",
+            "step_number": 1,
+            "approver_role": "DBA_SENIOR",
+            "approver_name": "bob",
+            "status": "approved",
+            "requested_at": "2026-01-28T04:40:30.799936",
+            "responded_at": "2026-01-28T04:40:30.800158",
+            "comments": "Looks good",
+            "escalation_reason": null
+          }
+        ],
+        "current_step": 0,
+        "status": "approved",
+        "created_at": "2026-01-28T04:40:30.799940",
+        "completed_at": "2026-01-28T04:40:30.800159",
+        "requires_multi_approval": false
+      },
+      "rollback_plan": {
+        "data_loss_risk": "none"
+      },
+      "impact_scope": "table",
+      "affected_objects": [],
+      "status": "pending",
+      "executed_at": null,
+      "executed_by": null,
+      "kb_entry_id": null,
+      "references": []
+    }
+  ],
+  "confidence_score": 0.5,
+  "evidence_count": 0,
+  "root_cause": null,
+  "audit_trail": {
+    "trail_id": "trail_641b03e2",
+    "review_card_id": "",
+    "entries": [
+      {
+        "audit_id": "audit_05896020",
+        "timestamp": "2026-01-28T04:40:30.799949",
+        "action_type": "created",
+        "actor": "system",
+        "actor_role": "",
+        "target_type": "action",
+        "target_id": "ra_73beab6f",
+        "details": "Action 'Action 1' added to review card",
+        "metadata": {}
+      },
+      {
+        "audit_id": "audit_1636ee4e",
+        "timestamp": "2026-01-28T04:40:30.800165",
+        "action_type": "approved",
+        "actor": "bob",
+        "actor_role": "approver",
+        "target_type": "action",
+        "target_id": "ra_73beab6f",
+        "details": "Action approved by bob: Looks good",
+        "metadata": {}
+      }
+    ],
+    "created_at": "2026-01-28T04:40:30.799931"
+  },
+  "status": "pending_review",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "created_at": "2026-01-28T04:40:30.799932",
+  "expires_at": null
+}

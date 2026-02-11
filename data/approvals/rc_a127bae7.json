@@ -1,0 +1,72 @@
+{
+  "card_id": "rc_a127bae7",
+  "incident_id": null,
+  "title": "Test",
+  "summary": "Test card",
+  "category": "",
+  "severity": "medium",
+  "actions": [
+    {
+      "action_id": "ra_6818e73c",
+      "action_type": "",
+      "title": "Action 1",
+      "description": "",
+      "sql_command": null,
+      "config_change": null,
+      "validation_command": null,
+      "priority": "medium",
+      "estimated_duration": "",
+      "risk": "medium",
+      "risk_indicators": {
+        "risk_level": "low",
+        "severity_badge": "\ud83d\udfe2 LOW",
+        "color_code": "#00CC66",
+        "risk_summary": "",
+        "risk_details": []
+      },
+      "safety_warnings": {
+        "is_destructive": false
+      },
+      "operation_mode": "online",
+      "requires_maintenance_window": false,
+      "requires_approval": false,
+      "approval_workflow": null,
+      "rollback_plan": {
+        "data_loss_risk": "none"
+      },
+      "impact_scope": "table",
+      "affected_objects": [],
+      "status": "pending",
+      "executed_at": null,
+      "executed_by": null,
+      "kb_entry_id": null,
+      "references": []
+    }
+  ],
+  "confidence_score": 0.5,
+  "evidence_count": 0,
+  "root_cause": null,
+  "audit_trail": {
+    "trail_id": "trail_63ffa36f",
+    "review_card_id": "",
+    "entries": [
+      {
+        "audit_id": "audit_a38924ea",
+        "timestamp": "2026-02-04T05:52:09.920687",
+        "action_type": "created",
+        "actor": "system",
+        "actor_role": "",
+        "target_type": "action",
+        "target_id": "ra_6818e73c",
+        "details": "Action 'Action 1' added to review card",
+        "metadata": {}
+      }
+    ],
+    "created_at": "2026-02-04T05:52:09.920675"
+  },
+  "status": "pending_review",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "created_at": "2026-02-04T05:52:09.920676",
+  "expires_at": null
+}

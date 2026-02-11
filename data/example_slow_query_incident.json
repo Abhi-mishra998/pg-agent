@@ -1,0 +1,320 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Example Slow Query Incident",
+  "description": "Populated example incident output for a production slow query case",
+  "incident_output": {
+    "schema_version": "1.0.0",
+    "generated_at": "2026-01-25T03:15:00Z",
+    "generator_version": "pg-agent-v1.0.0",
+    "correlation_id": "corr-abc123-def456",
+    "summary": {
+      "incident_id": "INC-20260125-8F2A1B",
+      "title": "QUERY_PERFORMANCE: Sequential Scan on orders_table",
+      "severity": "P2_HIGH",
+      "status": "IDENTIFIED",
+      "category": "QUERY_PERFORMANCE",
+      "detected_at": "2026-01-25T03:10:00Z",
+      "acknowledged_at": "2026-01-25T03:12:00Z",
+      "resolved_at": null,
+      "time_window": {
+        "start_time": "2026-01-25T02:50:00Z",
+        "end_time": "2026-01-25T03:10:00Z",
+        "duration_seconds": 1200
+      },
+      "db_context": {
+        "database_name": "production_orders",
+        "schema_name": "public",
+        "table_name": "orders_table",
+        "index_name": null,
+        "query_fingerprint": "SELECT * FROM orders_table WHERE customer_id = $1 AND created_at > $2",
+        "query_hash": "abc123def456",
+        "pg_version": "15.4",
+        "host": "db-prod-01.example.com",
+        "application_name": "order-processor"
+      }
+    },
+    "root_causes": [
+      {
+        "cause_id": "rc_8a7b6c5d",
+        "cause_type": "MISSING_INDEX",
+        "description": "Query on orders_table lacks index on (customer_id, created_at) columns causing sequential scan",
+        "contributing_factors": [
+          "Table grew beyond 10M rows without index maintenance",
+          "Query pattern changed to filter by customer_id",
+          "Statistics are stale (last ANALYZE 7 days ago)"
+        ],
+        "causation_chain": [
+          "1. Customer-facing query added new filter on customer_id",
+          "2. No index exists on customer_id column",
+          "3. PostgreSQL planner chose sequential scan (correct given no index)",
+          "4. Sequential scan on 10M rows caused 15s+ query times",
+          "5. Connection pool exhausted, causing application timeouts"
+        ],
+        "evidence_ids": ["ev_sig_001", "ev_sig_002", "ev_sig_003"],
+        "is_primary": true
+      },
+      {
+        "cause_id": "rc_9b8c7d6e",
+        "cause_type": "STALE_STATISTICS",
+        "description": "Table statistics are 7 days old, causing potential plan suboptimality",
+        "contributing_factors": [
+          "Automated ANALYZE disabled during maintenance window",
+          "Data distribution changed significantly since last ANALYZE"
+        ],
+        "causation_chain": [],
+        "evidence_ids": ["ev_sig_004"],
+        "is_primary": false
+      }
+    ],
+    "evidence": [
+      {
+        "evidence_id": "ev_sig_001",
+        "evidence_type": "METRIC",
+        "source_signal": "sequential_scan_detected",
+        "description": "Sequential scan detected on orders_table with 10,234,567 rows",
+        "metric": {
+          "metric_name": "seq_scan_count",
+          "value": 1523,
+          "unit": "scans",
+          "threshold": 100,
+          "operator": ">",
+          "is_anomaly": true
+        },
+        "raw_value": {
+          "table": "orders_table",
+          "seq_scans": 1523,
+          "idx_scans": 12,
+          "seq_scan_ratio": 0.99
+        },
+        "timestamp": "2026-01-25T03:08:00Z",
+        "provenance": "pg_stat_user_tables"
+      },
+      {
+        "evidence_id": "ev_sig_002",
+        "evidence_type": "QUERY",
+        "source_signal": "high_query_latency",
+        "description": "Query with fingerprint SELECT * FROM orders_table WHERE customer_id = $1 AND created_at > $2 exceeded latency threshold",
+        "metric": {
+          "metric_name": "query_latency_ms",
+          "value": 15234.5,
+          "unit": "ms",
+          "threshold": 500,
+          "operator": ">",
+          "is_anomaly": true
+        },
+        "raw_value": {
+          "query_fingerprint": "SELECT * FROM orders_table WHERE customer_id = $1 AND created_at > $2",
+          "calls": 1452,
+          "mean_time_ms": 15234.5,
+          "total_time_ms": 22110000,
+          "max_time_ms": 45678.9
+        },
+        "timestamp": "2026-01-25T03:10:00Z",
+        "provenance": "pg_stat_statements"
+      },
+      {
+        "evidence_id": "ev_sig_003",
+        "evidence_type": "FACT",
+        "source_signal": "missing_index_large_table",
+        "description": "Large table (10M+ rows) has no index on filter columns",
+        "metric": null,
+        "raw_value": {
+          "table": "orders_table",
+          "row_count": 10234567,
+          "indexes_count": 1,
+          "index_columns": ["id"],
+          "missing_index_columns": ["customer_id", "created_at"]
+        },
+        "timestamp": "2026-01-25T03:05:00Z",
+        "provenance": "pg_indexes"
+      },
+      {
+        "evidence_id": "ev_sig_004",
+        "evidence_type": "TABLE_STATS",
+        "source_signal": "stale_statistics",
+        "description": "Table statistics are 7 days old (last_analyze: 2026-01-18T03:00:00Z)",
+        "metric": {
+          "metric_name": "days_since_analyze",
+          "value": 7,
+          "unit": "days",
+          "threshold": 3,
+          "operator": ">",
+          "is_anomaly": true
+        },
+        "raw_value": {
+          "table": "orders_table",
+          "last_analyze": "2026-01-18T03:00:00Z",
+          "last_vacuum": "2026-01-20T22:15:00Z",
+          "n_dead_tup": 234567,
+          "dead_tuple_ratio": 0.023
+        },
+        "timestamp": "2026-01-25T03:00:00Z",
+        "provenance": "pg_stat_user_tables"
+      },
+      {
+        "evidence_id": "ev_sig_005",
+        "evidence_type": "EXECUTION_PLAN",
+        "source_signal": "plan_analysis",
+        "description": "Query execution plan shows Seq Scan on orders_table",
+        "metric": null,
+        "raw_value": {
+          "plan_hash": "xyz789",
+          "plan": {
+            "Node Type": "Seq Scan",
+            "Relation Name": "orders_table",
+            "Filter": "((customer_id = $1) AND (created_at > $2))",
+            "Rows Removed by Filter": 9876543,
+            "Actual Rows": 356024,
+            "Actual Loops": 1,
+            "Execution Time ms": 15234.5
+          }
+        },
+        "timestamp": "2026-01-25T03:10:00Z",
+        "provenance": "EXPLAIN ANALYZE"
+      },
+      {
+        "evidence_id": "ev_sig_006",
+        "evidence_type": "CONFIG",
+        "source_signal": "config_check",
+        "description": "shared_buffers is set to 25% of available RAM (64GB), which is within recommended range",
+        "metric": null,
+        "raw_value": {
+          "shared_buffers": "16GB",
+          "effective_cache_size": "48GB",
+          "work_mem": "64MB",
+          "maintenance_work_mem": "2GB"
+        },
+        "timestamp": "2026-01-25T03:00:00Z",
+        "provenance": "postgresql.conf"
+      },
+      {
+        "evidence_id": "ev_sig_007",
+        "evidence_type": "LOG_ENTRY",
+        "source_signal": "log_analysis",
+        "description": "Application logs show connection pool exhaustion",
+        "metric": null,
+        "raw_value": {
+          "log_sample": "2026-01-25T03:09:45Z ERROR: remaining connection slots are reserved for non-replication superuser connections",
+          "error_count": 47,
+          "time_range": "02:55:00 - 03:10:00"
+        },
+        "timestamp": "2026-01-25T03:10:00Z",
+        "provenance": "application_logs"
+      }
+    ],
+    "impact": {
+      "blast_radius": "HIGH",
+      "affected_services": [
+        "order-processor",
+        "order-history-api",
+        "customer-dashboard"
+      ],
+      "affected_endpoints": [
+        "/api/v2/orders",
+        "/api/v2/orders/history",
+        "/api/v2/customers/{id}/orders"
+      ],
+      "business_impact": "Customer-facing order lookup failures; 23% increase in order processing latency; potential revenue impact during peak hours",
+      "technical_impact": "Database connection pool exhaustion; increased database CPU usage (85%); application timeouts on order-related operations",
+      "resource_pressure": ["cpu", "io"],
+      "metrics": {
+        "latency_p95_ms": 5234.5,
+        "latency_p99_ms": 15234.5,
+        "throughput_drop_percent": 35.2,
+        "error_rate_percent": 4.7,
+        "blocked_queries_count": 89,
+        "affected_rows_estimate": null,
+        "affected_connections_count": 47
+      }
+    },
+    "recommended_actions": [
+      {
+        "action_id": "act_1a2b3c4d",
+        "action_type": "CREATE_INDEX",
+        "description": "Create composite index on orders_table(customer_id, created_at) to eliminate sequential scan",
+        "sql_command": "-- Create index concurrently to avoid locks\nCREATE INDEX CONCURRENTLY \n  idx_orders_customer_created \nON orders_table (customer_id, created_at);\n\n-- Verify index was created\nSELECT indexname, indexdef \nFROM pg_indexes \nWHERE tablename = 'orders_table';",
+        "config_change": null,
+        "risk": "MEDIUM",
+        "estimated_downtime": "0s",
+        "requiresApproval": true,
+        "approver_role": "DBA_LEAD",
+        "priority": "critical",
+        "validation_command": "EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM orders_table WHERE customer_id = 123 AND created_at > '2026-01-01'::timestamp;",
+        "rollback_command": "DROP INDEX CONCURRENTLY idx_orders_customer_created;"
+      },
+      {
+        "action_id": "act_5e6f7g8h",
+        "action_type": "ANALYZE",
+        "description": "Run ANALYZE on orders_table to update statistics for better query planning",
+        "sql_command": "ANALYZE orders_table;",
+        "config_change": null,
+        "risk": "LOW",
+        "estimated_downtime": "0s",
+        "requiresApproval": false,
+        "approver_role": null,
+        "priority": "high",
+        "validation_command": "SELECT last_analyze, n_dead_tup, n_live_tup FROM pg_stat_user_tables WHERE relname = 'orders_table';",
+        "rollback_command": null
+      },
+      {
+        "action_id": "act_9i0j1k2l",
+        "action_type": "QUERY_OPTIMIZATION",
+        "description": "Review and optimize the application query - consider selecting only required columns instead of SELECT *",
+        "sql_command": null,
+        "config_change": null,
+        "risk": "LOW",
+        "estimated_downtime": "0s",
+        "requiresApproval": false,
+        "approver_role": null,
+        "priority": "medium",
+        "validation_command": null,
+        "rollback_command": null
+      },
+      {
+        "action_id": "act_3m4n5o6p",
+        "action_type": "MAINTENANCE_WINDOW",
+        "description": "Schedule maintenance window to reindex and vacuum full if issues persist after initial fix",
+        "sql_command": null,
+        "config_change": null,
+        "risk": "MEDIUM",
+        "estimated_downtime": "5min",
+        "requiresApproval": true,
+        "approver_role": "SRE_LEAD",
+        "priority": "low",
+        "validation_command": null,
+        "rollback_command": null
+      }
+    ],
+    "safety_approval": {
+      "requires_dba_approval": true,
+      "requires_sre_approval": false,
+      "requires_manager_approval": false,
+      "change_ticket_required": true,
+      "maintenance_window_required": false,
+      "downtime_acceptable": false,
+      "rollback_plan": "DROP INDEX CONCURRENTLY idx_orders_customer_created; - No data loss risk with concurrent index creation",
+      "rollback_command": "DROP INDEX CONCURRENTLY idx_orders_customer_created;",
+      "risk_summary": "Medium risk - CREATE INDEX CONCURRENTLY avoids locks but may take longer on large table; ANALYZE is low risk",
+      "caveats": [
+        "Always use CONCURRENTLY for index creation on production tables",
+        "Verify no long-running transactions before index creation",
+        "Monitor I/O impact during index build - consider off-peak hours",
+        "Test index in staging environment first",
+        "Have monitoring ready to verify query improvement"
+      ]
+    },
+    "confidence": {
+      "score": 0.92,
+      "reasoning": "Based on 7 evidence items from 5 signals - multiple independent sources confirm missing index as root cause",
+      "evidence_count": 7,
+      "signal_count": 5,
+      "uncertainty_factors": [],
+      "recommended_verification": [
+        "Run EXPLAIN ANALYZE before and after index creation",
+        "Monitor pg_stat_statements for query improvement",
+        "Verify no regressions in other queries accessing orders_table"
+      ]
+    }
+  }
+}
+

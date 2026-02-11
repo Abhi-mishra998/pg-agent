@@ -1,0 +1,551 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PostgreSQL Incident Output Schema",
+  "description": "Production-grade schema for PostgreSQL DBA agent incident output. Deterministic, auditable, and structured.",
+  "version": "1.0.0",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "summary",
+    "root_causes",
+    "evidence",
+    "impact",
+    "recommended_actions",
+    "safety_approval",
+    "confidence"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Schema version identifier"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when incident was generated"
+    },
+    "generator_version": {
+      "type": "string",
+      "description": "Version of the generator (pg-agent)"
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Optional correlation ID for tracing"
+    },
+    "summary": {
+      "$ref": "#/definitions/IncidentSummary"
+    },
+    "root_causes": {
+      "type": "array",
+      "description": "Root cause analysis (can be multiple)",
+      "items": {
+        "$ref": "#/definitions/RootCause"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "description": "Supporting evidence (metrics, facts, sources)",
+      "items": {
+        "$ref": "#/definitions/Evidence"
+      }
+    },
+    "impact": {
+      "$ref": "#/definitions/ImpactAnalysis",
+      "description": "Impact analysis section"
+    },
+    "recommended_actions": {
+      "type": "array",
+      "description": "Recommended actions to resolve the incident",
+      "items": {
+        "$ref": "#/definitions/Action"
+      }
+    },
+    "safety_approval": {
+      "$ref": "#/definitions/ApprovalRequirement",
+      "description": "Safety and approval requirements"
+    },
+    "confidence": {
+      "$ref": "#/definitions/ConfidenceScore",
+      "description": "Confidence scoring with reasoning"
+    }
+  },
+  "definitions": {
+    "IncidentSummary": {
+      "type": "object",
+      "required": ["incident_id", "title", "severity", "status", "category", "detected_at", "db_context"],
+      "properties": {
+        "incident_id": {
+          "type": "string",
+          "pattern": "^INC-\\d{8}-[A-F0-9]{6}$",
+          "description": "Unique incident identifier (e.g., INC-20260125-ABC123)"
+        },
+        "title": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Za-z0-9_]+: .+$",
+          "description": "Structured title: {category}: {specific_issue}"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["P1_CRITICAL", "P2_HIGH", "P3_MEDIUM", "P4_LOW", "P5_INFO"],
+          "description": "Incident severity level"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["DETECTED", "INVESTIGATING", "IDENTIFIED", "MONITORING", "RESOLVED", "CLOSED"],
+          "description": "Incident lifecycle status"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "QUERY_PERFORMANCE",
+            "LOCKING",
+            "INDEX_HEALTH",
+            "MAINTENANCE",
+            "CONFIGURATION",
+            "HARDWARE_CAPACITY",
+            "REPLICATION",
+            "CONNECTION",
+            "STORAGE",
+            "SECURITY",
+            "APPLICATION_IMPACT"
+          ],
+          "description": "Incident category"
+        },
+        "detected_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Detection timestamp (ISO 8601)"
+        },
+        "acknowledged_at": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Acknowledgment timestamp"
+        },
+        "resolved_at": {
+          "type": ["string", "null"],
+          "format": "date-time",
+          "description": "Resolution timestamp"
+        },
+        "time_window": {
+          "$ref": "#/definitions/TimeWindow"
+        },
+        "db_context": {
+          "$ref": "#/definitions/DatabaseContext"
+        }
+      }
+    },
+    "TimeWindow": {
+      "type": "object",
+      "required": ["start_time", "end_time", "duration_seconds"],
+      "properties": {
+        "start_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Start of time window"
+        },
+        "end_time": {
+          "type": "string",
+          "format": "date-time",
+          "description": "End of time window"
+        },
+        "duration_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Duration in seconds"
+        }
+      }
+    },
+    "DatabaseContext": {
+      "type": "object",
+      "properties": {
+        "database_name": {
+          "type": "string",
+          "description": "Target database name"
+        },
+        "schema_name": {
+          "type": "string",
+          "default": "public",
+          "description": "Schema name"
+        },
+        "table_name": {
+          "type": ["string", "null"],
+          "description": "Affected table name"
+        },
+        "index_name": {
+          "type": ["string", "null"],
+          "description": "Affected index name"
+        },
+        "query_fingerprint": {
+          "type": ["string", "null"],
+          "description": "Normalized query fingerprint"
+        },
+        "query_hash": {
+          "type": ["string", "null"],
+          "description": "Query hash identifier"
+        },
+        "pg_version": {
+          "type": ["string", "null"],
+          "description": "PostgreSQL version"
+        },
+        "host": {
+          "type": ["string", "null"],
+          "description": "Database host"
+        },
+        "application_name": {
+          "type": ["string", "null"],
+          "description": "Application name from pg_stat_activity"
+        }
+      }
+    },
+    "RootCause": {
+      "type": "object",
+      "required": ["cause_id", "cause_type", "description", "evidence_ids"],
+      "properties": {
+        "cause_id": {
+          "type": "string",
+          "pattern": "^rc_[a-f0-9]{8}$",
+          "description": "Unique root cause identifier"
+        },
+        "cause_type": {
+          "type": "string",
+          "enum": [
+            "MISSING_INDEX",
+            "STALE_STATISTICS",
+            "LOCK_CONTENTION",
+            "BAD_PLAN",
+            "RESOURCE_EXHAUSTION",
+            "CONFIGURATION_MISMATCH",
+            "MAINTENANCE_OVERDUE",
+            "HARDWARE_BOTTLENECK",
+            "QUERY_PATTERN_CHANGE",
+            "DATA_GROWTH",
+            "EXTERNAL_FACTOR",
+            "UNKNOWN"
+          ],
+          "description": "Root cause classification"
+        },
+        "description": {
+          "type": "string",
+          "description": "Structured description of the root cause"
+        },
+        "contributing_factors": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Factors contributing to the issue"
+        },
+        "causation_chain": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Step-by-step causation chain"
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "IDs of supporting evidence"
+        },
+        "is_primary": {
+          "type": "boolean",
+          "default": false,
+          "description": "Flag for primary root cause"
+        }
+      }
+    },
+    "Evidence": {
+      "type": "object",
+      "required": ["evidence_id", "evidence_type", "description"],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^ev_[a-f0-9]{8}$",
+          "description": "Unique evidence identifier"
+        },
+        "evidence_type": {
+          "type": "string",
+          "enum": ["METRIC", "FACT", "QUERY", "LOCK", "CONFIG", "TABLE_STATS", "INDEX_STATS", "EXECUTION_PLAN", "LOG_ENTRY", "SOURCE_REFERENCE"],
+          "description": "Type of evidence"
+        },
+        "source_signal": {
+          "type": "string",
+          "description": "Signal that generated this evidence"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Structured evidence description (max 500 chars)"
+        },
+        "metric": {
+          "$ref": "#/definitions/MetricEvidence"
+        },
+        "raw_value": {
+          "description": "Raw value from source"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Evidence timestamp"
+        },
+        "provenance": {
+          "type": "string",
+          "description": "Source system (e.g., pg_stat_statements)"
+        }
+      }
+    },
+    "MetricEvidence": {
+      "type": "object",
+      "required": ["metric_name", "value", "unit"],
+      "properties": {
+        "metric_name": {
+          "type": "string",
+          "description": "Name of the metric"
+        },
+        "value": {
+          "type": ["number", "string", "integer"],
+          "description": "Metric value"
+        },
+        "unit": {
+          "type": "string",
+          "description": "Unit of measurement"
+        },
+        "threshold": {
+          "type": ["number", "integer", "null"],
+          "description": "Threshold for comparison"
+        },
+        "operator": {
+          "type": "string",
+          "enum": [">", "<", ">=", "<=", "==", "!="],
+          "default": ">",
+          "description": "Comparison operator"
+        },
+        "is_anomaly": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this is an anomalous value"
+        }
+      }
+    },
+    "ImpactAnalysis": {
+      "type": "object",
+      "required": ["blast_radius", "technical_impact"],
+      "properties": {
+        "blast_radius": {
+          "type": "string",
+          "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "NONE"],
+          "description": "Scope of impact"
+        },
+        "affected_services": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Affected service names"
+        },
+        "affected_endpoints": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Affected API endpoints"
+        },
+        "business_impact": {
+          "type": "string",
+          "description": "Structured business impact description"
+        },
+        "technical_impact": {
+          "type": "string",
+          "description": "Structured technical impact description"
+        },
+        "resource_pressure": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["cpu", "memory", "io", "storage", "network"]
+          },
+          "description": "Resources under pressure"
+        },
+        "metrics": {
+          "$ref": "#/definitions/ImpactMetrics"
+        }
+      }
+    },
+    "ImpactMetrics": {
+      "type": "object",
+      "properties": {
+        "latency_p95_ms": {
+          "type": ["number", "null"],
+          "description": "95th percentile latency in milliseconds"
+        },
+        "latency_p99_ms": {
+          "type": ["number", "null"],
+          "description": "99th percentile latency in milliseconds"
+        },
+        "throughput_drop_percent": {
+          "type": ["number", "null"],
+          "description": "Throughput drop percentage"
+        },
+        "error_rate_percent": {
+          "type": ["number", "null"],
+          "description": "Error rate percentage"
+        },
+        "blocked_queries_count": {
+          "type": ["integer", "null"],
+          "description": "Number of blocked queries"
+        },
+        "affected_rows_estimate": {
+          "type": ["integer", "null"],
+          "description": "Estimated affected rows"
+        },
+        "affected_connections_count": {
+          "type": ["integer", "null"],
+          "description": "Number of affected connections"
+        }
+      }
+    },
+    "Action": {
+      "type": "object",
+      "required": ["action_id", "action_type", "description"],
+      "properties": {
+        "action_id": {
+          "type": "string",
+          "pattern": "^act_[a-f0-9]{8}$",
+          "description": "Unique action identifier"
+        },
+        "action_type": {
+          "type": "string",
+          "description": "Type of action (e.g., CREATE_INDEX, VACUUM, CONFIG_CHANGE)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Action description"
+        },
+        "sql_command": {
+          "type": ["string", "null"],
+          "description": "SQL command to execute"
+        },
+        "config_change": {
+          "type": ["object", "null"],
+          "description": "Configuration change parameters"
+        },
+        "risk": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+          "default": "LOW",
+          "description": "Risk level of the action"
+        },
+        "estimated_downtime": {
+          "type": ["string", "null"],
+          "description": "Expected downtime (e.g., 0s, 5min, 1hr)"
+        },
+        "requiresApproval": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether approval is required"
+        },
+        "approver_role": {
+          "type": ["string", "null"],
+          "description": "Required approver role"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "default": "high",
+          "description": "Action priority"
+        },
+        "validation_command": {
+          "type": ["string", "null"],
+          "description": "Command to validate action"
+        },
+        "rollback_command": {
+          "type": ["string", "null"],
+          "description": "Rollback command if needed"
+        }
+      }
+    },
+    "ApprovalRequirement": {
+      "type": "object",
+      "properties": {
+        "requires_dba_approval": {
+          "type": "boolean",
+          "default": false,
+          "description": "DBA approval required"
+        },
+        "requires_sre_approval": {
+          "type": "boolean",
+          "default": false,
+          "description": "SRE approval required"
+        },
+        "requires_manager_approval": {
+          "type": "boolean",
+          "default": false,
+          "description": "Management approval required"
+        },
+        "change_ticket_required": {
+          "type": "boolean",
+          "default": false,
+          "description": "Change ticket required"
+        },
+        "maintenance_window_required": {
+          "type": "boolean",
+          "default": false,
+          "description": "Maintenance window required"
+        },
+        "downtime_acceptable": {
+          "type": "boolean",
+          "default": false,
+          "description": "Downtime is acceptable"
+        },
+        "rollback_plan": {
+          "type": "string",
+          "description": "Rollback plan description"
+        },
+        "rollback_command": {
+          "type": ["string", "null"],
+          "description": "Rollback command"
+        },
+        "risk_summary": {
+          "type": "string",
+          "description": "Summary of risk level"
+        },
+        "caveats": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Additional caveats and notes"
+        }
+      }
+    },
+    "ConfidenceScore": {
+      "type": "object",
+      "required": ["score", "reasoning", "evidence_count", "signal_count"],
+      "properties": {
+        "score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence score (0.0 to 1.0)"
+        },
+        "reasoning": {
+          "type": "string",
+          "description": "Explanation of the confidence score"
+        },
+        "evidence_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of supporting evidence items"
+        },
+        "signal_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of signals used"
+        },
+        "uncertainty_factors": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Factors contributing to uncertainty"
+        },
+        "recommended_verification": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Verification steps for low confidence"
+        }
+      }
+    }
+  }
+}
+

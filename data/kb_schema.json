@@ -1,0 +1,384 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PostgreSQL Knowledge Base Schema for Llama Model Training",
+  "description": "Unified JSON schema for PostgreSQL performance troubleshooting knowledge base",
+  "version": "1.0.0",
+  "type": "object",
+  "properties": {
+    "kb_version": {
+      "type": "string",
+      "description": "Version of the KB schema format"
+    },
+    "entries": {
+      "type": "array",
+      "description": "Array of knowledge base entries",
+      "items": {
+        "$ref": "#/definitions/kb_entry"
+      }
+    }
+  },
+  "definitions": {
+    "kb_entry": {
+      "type": "object",
+      "description": "A single knowledge base entry for PostgreSQL troubleshooting",
+      "required": ["metadata", "problem_identity", "detection_signals", "root_cause_analysis", "recommendations"],
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/metadata"
+        },
+        "problem_identity": {
+          "$ref": "#/definitions/problem_identity"
+        },
+        "detection_signals": {
+          "$ref": "#/definitions/detection_signals"
+        },
+        "context": {
+          "$ref": "#/definitions/context"
+        },
+        "root_cause_analysis": {
+          "$ref": "#/definitions/root_cause_analysis"
+        },
+        "impact_analysis": {
+          "$ref": "#/definitions/impact_analysis"
+        },
+        "recommendations": {
+          "$ref": "#/definitions/recommendations"
+        },
+        "evidence": {
+          "$ref": "#/definitions/evidence"
+        },
+        "confidence": {
+          "$ref": "#/definitions/confidence"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Identification and categorization of the KB entry",
+      "required": ["kb_id", "category", "severity", "created_at"],
+      "properties": {
+        "kb_id": {
+          "type": "string",
+          "description": "Unique identifier for this KB entry",
+          "pattern": "^[a-z_]+_[0-9]+$"
+        },
+        "category": {
+          "type": "string",
+          "description": "Problem category",
+          "enum": [
+            "query_performance",
+            "index_health",
+            "locking",
+            "maintenance",
+            "configuration",
+            "hardware_capacity",
+            "application_impact",
+            "incident_response"
+          ]
+        },
+        "severity": {
+          "type": "string",
+          "description": "Issue severity level",
+          "enum": ["critical", "high", "medium", "low", "info"]
+        },
+        "source": {
+          "type": "string",
+          "description": "Data source (e.g., pg_stat_statements, pg_stat_user_tables)"
+        },
+        "version": {
+          "type": "string",
+          "description": "Schema version"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp"
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Searchable tags for this entry"
+        }
+      }
+    },
+    "problem_identity": {
+      "type": "object",
+      "description": "What is the issue",
+      "required": ["issue_type", "short_description"],
+      "properties": {
+        "issue_type": {
+          "type": "string",
+          "description": "Type of problem detected"
+        },
+        "short_description": {
+          "type": "string",
+          "description": "Brief description of the problem"
+        },
+        "long_description": {
+          "type": "string",
+          "description": "Detailed explanation of the problem"
+        },
+        "symptoms": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Observable symptoms"
+        },
+        "affected_components": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["planner", "executor", "io", "memory", "cpu", "network", "storage", "lock_manager", "vacuum", "analyze"]
+          },
+          "description": "PostgreSQL components affected"
+        }
+      }
+    },
+    "detection_signals": {
+      "type": "object",
+      "description": "How was the issue detected",
+      "properties": {
+        "metrics": {
+          "type": "object",
+          "description": "Key performance metrics"
+        },
+        "thresholds": {
+          "type": "object",
+          "description": "Thresholds used to detect anomaly"
+        },
+        "anomaly_flags": {
+          "type": "object",
+          "description": "Boolean flags for each detected anomaly"
+        },
+        "source_queries": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "PostgreSQL queries used to detect this issue"
+        },
+        "detection_method": {
+          "type": "string",
+          "description": "How the issue was detected (e.g., threshold_alert, manual_investigation)"
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "description": "Where and when the issue occurred",
+      "properties": {
+        "query_fingerprint": {
+          "$ref": "#/definitions/query_fingerprint"
+        },
+        "environment": {
+          "type": "object",
+          "description": "Environment information",
+          "properties": {
+            "database": { "type": "string" },
+            "schema": { "type": "string" },
+            "application": { "type": "string" },
+            "host": { "type": "string" },
+            "pg_version": { "type": "string" }
+          }
+        },
+        "tables_involved": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Tables involved in the issue"
+        },
+        "indexes_involved": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Indexes involved in the issue"
+        }
+      }
+    },
+    "query_fingerprint": {
+      "type": "object",
+      "description": "Normalized query information",
+      "properties": {
+        "query_hash": {
+          "type": "string",
+          "description": "Hash of the normalized query"
+        },
+        "normalized_query": {
+          "type": "string",
+          "description": "The normalized query with placeholders"
+        },
+        "query_type": {
+          "type": "string",
+          "enum": ["SELECT", "INSERT", "UPDATE", "DELETE", "CALL", "OTHER"]
+        },
+        "tables": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Tables accessed in the query"
+        }
+      }
+    },
+    "root_cause_analysis": {
+      "type": "object",
+      "description": "Why did the issue happen",
+      "required": ["primary_cause"],
+      "properties": {
+        "primary_cause": {
+          "type": "string",
+          "description": "Main root cause of the issue"
+        },
+        "contributing_factors": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Factors that contributed to the issue"
+        },
+        "causation_chain": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Step-by-step chain of causes"
+        },
+        "planner_misbehavior": {
+          "type": "string",
+          "description": "Planner decision issues if applicable"
+        }
+      }
+    },
+    "impact_analysis": {
+      "type": "object",
+      "description": "What was affected",
+      "properties": {
+        "latency_impact": {
+          "type": "string",
+          "description": "Impact on query/database latency"
+        },
+        "throughput_impact": {
+          "type": "string",
+          "description": "Impact on database throughput"
+        },
+        "resource_pressure": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["io", "memory", "cpu", "network", "storage"]
+          },
+          "description": "Resources under pressure"
+        },
+        "blast_radius": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "description": "Scope of impact"
+        },
+        "application_impact": {
+          "type": "object",
+          "description": "Application-level impact",
+          "properties": {
+            "api_latency_p95_ms": { "type": "number" },
+            "error_rate_percent": { "type": "number" },
+            "connection_pool_status": { "type": "string" }
+          }
+        }
+      }
+    },
+    "recommendations": {
+      "type": "object",
+      "description": "How to fix the issue",
+      "required": ["immediate_actions", "long_term_fixes"],
+      "properties": {
+        "immediate_actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["action", "risk"],
+            "properties": {
+              "action": { "type": "string" },
+              "sql_example": { "type": "string" },
+              "config_example": { "type": "string" },
+              "risk": {
+                "type": "string",
+                "enum": ["low", "medium", "high"]
+              },
+              "estimated_downtime": { "type": "string" }
+            }
+          },
+          "description": "Immediate remediation steps"
+        },
+        "long_term_fixes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+              "action": { "type": "string" },
+              "sql_example": { "type": "string" },
+              "config_example": { "type": "string" },
+              "priority": {
+                "type": "string",
+                "enum": ["critical", "high", "medium", "low"]
+              }
+            }
+          },
+          "description": "Long-term solution steps"
+        },
+        "validation_steps": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Steps to verify the fix worked"
+        },
+        "preventive_actions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Actions to prevent recurrence"
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "description": "Supporting data and metrics",
+      "properties": {
+        "query_metrics": {
+          "type": "object",
+          "description": "Query-level metrics from pg_stat_statements"
+        },
+        "table_statistics": {
+          "type": "array",
+          "items": { "type": "object" },
+          "description": "Table-level statistics"
+        },
+        "index_statistics": {
+          "type": "array",
+          "items": { "type": "object" },
+          "description": "Index-level statistics"
+        },
+        "locking_details": {
+          "type": "object",
+          "description": "Locking information if applicable"
+        },
+        "configuration_values": {
+          "type": "object",
+          "description": "Relevant configuration parameter values"
+        },
+        "hardware_metrics": {
+          "type": "object",
+          "description": "Hardware resource metrics"
+        }
+      }
+    },
+    "confidence": {
+      "type": "object",
+      "description": "Reliability metrics for this diagnosis",
+      "required": ["confidence_score"],
+      "properties": {
+        "confidence_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence level (0.0 to 1.0)"
+        },
+        "confidence_reasoning": {
+          "type": "string",
+          "description": "Explanation of the confidence score"
+        },
+        "evidence_count": {
+          "type": "integer",
+          "description": "Number of supporting evidence points"
+        }
+      }
+    }
+  }
+}
+

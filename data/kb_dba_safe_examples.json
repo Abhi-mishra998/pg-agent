@@ -1,0 +1,615 @@
+{
+  "kb_version": "1.0.0",
+  "description": "DBA-Safe Knowledge Base Examples - Missing Index, Stale Statistics, Blocking Query",
+  "entries": [
+    {
+      "metadata": {
+        "kb_id": "dba_missing_index_001",
+        "category": "index_health",
+        "severity": "high",
+        "source": "pg_stat_statements",
+        "version": "1.0",
+        "created_at": "2026-01-27T00:00:00Z",
+        "tags": ["missing_index", "sequential_scan", "performance", "dba_safe"]
+      },
+      "problem_identity": {
+        "issue_type": "Missing Index on Large Table",
+        "short_description": "Sequential scan detected on large table - index recommended",
+        "long_description": "A query is performing sequential scans on a large table (>100K rows) without using an index. This indicates a missing index on columns used in WHERE clauses or JOIN conditions. Adding an appropriate index can improve query performance by 10-100x.",
+        "symptoms": [
+          "Sequential scan detected on table with >100K rows",
+          "High query latency for filtering queries",
+          "High buffer cache reads for the affected table",
+          "Query plan shows Seq Scan instead of Index Scan"
+        ],
+        "affected_components": ["planner", "executor", "buffer_pool"]
+      },
+      "detection_signals": {
+        "metrics": {
+          "seq_scan_percent": 95.0,
+          "table_row_count": 500000,
+          "query_latency_ms": 5000,
+          "cache_hit_ratio": 0.65
+        },
+        "thresholds": {
+          "seq_scan_percent": "> 80%",
+          "table_row_count": "> 100000",
+          "query_latency_ms": "> 1000"
+        },
+        "anomaly_flags": {
+          "sequential_scan_anomaly": true,
+          "high_latency": true,
+          "low_cache_hit": true
+        },
+        "source_queries": [
+          "SELECT schemaname, tablename, seq_scan, seq_tup_read, idx_scan FROM pg_stat_user_tables WHERE seq_scan > 0 AND seq_tup_read > 100000",
+          "SELECT query, calls, mean_time, rows FROM pg_stat_statements WHERE query ILIKE '%filter_column%'"
+        ],
+        "detection_method": "threshold_alert"
+      },
+      "context": {
+        "query_fingerprint": {
+          "query_hash": "0xabc123",
+          "normalized_query": "SELECT * FROM orders WHERE customer_id = $1 AND status = $2",
+          "query_type": "SELECT",
+          "tables": ["orders"]
+        },
+        "environment": {
+          "database": "prod_db",
+          "schema": "public",
+          "application": "order-service",
+          "host": "db-prod-01",
+          "pg_version": "15.2"
+        },
+        "tables_involved": ["orders"],
+        "indexes_involved": []
+      },
+      "root_cause_analysis": {
+        "primary_cause": "Missing index on frequently filtered columns",
+        "contributing_factors": [
+          "No index on customer_id column",
+          "No index on status column",
+          "Query filters on both columns without index support"
+        ],
+        "causation_chain": [
+          "1. Query filters on customer_id and status columns",
+          "2. No index exists on these columns",
+          "3. PostgreSQL must perform sequential scan",
+          "4. All rows must be read from disk/memory",
+          "5. Query latency increases with table size"
+        ],
+        "planner_misbehavior": "Planner chose sequential scan because no index exists on filter columns"
+      },
+      "impact_analysis": {
+        "latency_impact": "Query latency increased to 5 seconds",
+        "throughput_impact": "Query throughput reduced by 90%",
+        "resource_pressure": ["io", "buffer_cache"],
+        "blast_radius": "medium",
+        "application_impact": {
+          "api_latency_p95_ms": 8000,
+          "error_rate_percent": 2.5
+        }
+      },
+      "recommendations": {
+        "immediate_actions": [
+          {
+            "action": "Create index on customer_id and status columns",
+            "sql_example": "CREATE INDEX CONCURRENTLY idx_orders_customer_status ON orders(customer_id, status);",
+            "risk": "medium",
+            "is_online": true,
+            "requires_approval": false,
+            "rollback_notes": "DROP INDEX CONCURRENTLY idx_orders_customer_status;",
+            "estimated_downtime": "none",
+            "priority": "immediate"
+          },
+          {
+            "action": "Verify index is being used",
+            "sql_example": "EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM orders WHERE customer_id = 123 AND status = 'pending';",
+            "risk": "low",
+            "is_online": true,
+            "requires_approval": false,
+            "rollback_notes": "Not applicable - read-only diagnostic operation",
+            "estimated_downtime": "none",
+            "priority": "immediate"
+          }
+        ],
+        "long_term_fixes": [
+          {
+            "action": "Create covering index for frequently accessed columns",
+            "sql_example": "CREATE INDEX CONCURRENTLY idx_orders_customer_status_cover ON orders(customer_id, status) INCLUDE (id, created_at, total_amount);",
+            "risk": "medium",
+            "is_online": true,
+            "requires_approval": false,
+            "rollback_notes": "DROP INDEX CONCURRENTLY idx_orders_customer_status_cover;",
+            "priority": "long-term"
+          },
+          {
+            "action": "Add monitoring for index usage",
+            "sql_example": "SELECT indexrelname, idx_scan, idx_tup_read, idx_tup_fetch FROM pg_stat_user_indexes WHERE relname = 'orders';",
+            "risk": "low",
+            "is_online": true,
+            "requires_approval": false,
+            "rollback_notes": "Not applicable - read-only operation",
+            "priority": "long-term"
+          }
+        ],
+        "validation_steps": [
+          "Verify Index Scan in query plan",
+          "Confirm query latency improvement (>10x expected)",
+          "Monitor cache hit ratio improvement",
+          "Check for any new slow queries after index creation"
+        ],
+        "preventive_actions": [
+          "Add index creation review to code deployment process",
+          "Monitor sequential scan percentage in pg_stat_user_tables",
+          "Set up alerts for sequential scans on tables >100K rows",
+          "Review query patterns before deploying new features"
+        ]
+      },
+      "evidence": {
+        "query_metrics": {
+          "source": "pg_stat_statements",
+          "values": {
+            "calls": 5000,
+            "mean_time_ms": 5000,
+            "total_time_ms": 25000000,
+            "rows_returned": 100
+          }
+        },
+        "table_statistics": [
+          {
+            "table_name": "orders",
+            "seq_scan": 500,
+            "seq_tup_read": 250000000,
+            "idx_scan": 10,
+            "n_live_tup": 500000,
+            "dead_tuple_ratio": 0.05
+          }
+        ],
+        "index_statistics": [],
+        "locking_details": {},
+        "configuration_values": {
+          "shared_buffers_mb": 16384,
+          "effective_cache_size_mb": 49152
+        }
+      },
+      "confidence": {
+        "confidence_score": 0.92,
+        "confidence_reasoning": "Clear sequential scan evidence, high row count, and significant latency improvement potential. The issue is well-defined with a straightforward solution.",
+        "evidence_count": 5
+      }
+    },
+    {
+      "metadata": {
+        "kb_id": "dba_stale_statistics_001",
+        "category": "maintenance",
+        "severity": "medium",
+        "source": "pg_stat_user_tables",
+        "version": "1.0",
+        "created_at": "2026-01-27T00:00:00Z",
+        "tags": ["stale_statistics", "analyze", "planner", "dba_safe"]
+      },
+      "problem_identity": {
+        "issue_type": "Stale Table Statistics",
+        "short_description": "Table statistics are outdated, causing planner misestimation",
+        "long_description": "Table statistics have not been updated recently (>7 days), causing the PostgreSQL planner to make suboptimal decisions about query execution plans. This can lead to sequential scans instead of index scans, incorrect join strategies, and poor row estimates.",
+        "symptoms": [
+          "Statistics last updated >7 days ago",
+          "Query plan shows unexpected scan methods",
+          "Row estimation errors detected",
+          "Performance regression without schema changes"
+        ],
+        "affected_components": ["planner", "statistics"]
+      },
+      "detection_signals": {
+        "metrics": {
+          "days_since_analyze": 14,
+          "rows_changed": 50000,
+          "row_estimation_error": 5.0
+        },
+        "thresholds": {
+          "days_since_analyze": "> 7",
+          "rows_changed_percent": "> 10",
+          "row_estimation_error": "> 3x"
+        },
+        "anomaly_flags": {
+          "stale_statistics": true,
+          "plan_regression": true,
+          "row_estimation_error": true
+        },
+        "source_queries": [
+          "SELECT schemaname, tablename, last_analyze, last_autoanalyze, n_live_tup, n_dead_tup FROM pg_stat_user_tables WHERE schemaname = 'public'",
+          "SELECT relname, last_vacuum, last_autovacuum, vacuum_count, autovacuum_count FROM pg_stat_user_tables"
+        ],
+        "detection_method": "threshold_alert"
+      },
+      "context": {
+        "query_fingerprint": {
+          "query_hash": "0xdef456",
+          "normalized_query": "SELECT * FROM products WHERE category_id = $1 AND is_active = true",
+          "query_type": "SELECT",
+          "tables": ["products"]
+        },
+        "environment": {
+          "database": "prod_db",
+          "schema": "public",
+          "application": "catalog-service",
+          "host": "db-prod-01",
+          "pg_version": "15.2"
+        },
+        "tables_involved": ["products"],
+        "indexes_involved": ["idx_products_category", "idx_products_active"]
+      },
+      "root_cause_analysis": {
+        "primary_cause": "Statistics not updated after significant data changes",
+        "contributing_factors": [
+          "Bulk data load or migration occurred",
+          "Autovacuum thresholds not triggered",
+          "Table has high churn but low autovacuum scale factor"
+        ],
+        "causation_chain": [
+          "1. Large amount of data inserted/updated/deleted",
+          "2. Autovacuum analyze thresholds not reached",
+          "3. Statistics remained stale",
+          "4. Planner uses outdated cardinality estimates",
+          "5. Suboptimal query plans generated"
+        ],
+        "planner_misbehavior": "Planner underestimated/overestimated row counts due to stale statistics"
+      },
+      "impact_analysis": {
+        "latency_impact": "Query latency increased 3-5x for affected queries",
+        "throughput_impact": "Throughput reduced by 30% for filtered queries",
+        "resource_pressure": ["planner", "executor"],
+        "blast_radius": "low",
+        "application_impact": {
+          "api_latency_p95_ms": 1500,
+          "error_rate_percent": 0.5
+        }
+      },
+      "recommendations": {
+        "immediate_actions": [
+          {
+            "action": "Run ANALYZE to update statistics",
+            "sql_example": "ANALYZE VERBOSE products;",
+            "risk": "low",
+            "is_online": true,
+            "requires_approval": false,
+            "rollback_notes": "Not needed - ANALYZE only collects statistics, no data modification",
+            "estimated_downtime": "none",
+            "priority": "immediate"
+          },
+          {
+            "action": "Verify statistics update completed",
+            "sql_example": "SELECT relname, last_analyze, last_autoanalyze FROM pg_stat_user_tables WHERE relname = 'products';",
+            "risk": "low",
+            "is_online": true,
+            "requires_approval": false,
+            "rollback_notes": "Not applicable - read-only operation",
+            "estimated_downtime": "none",
+            "priority": "immediate"
+          },
+          {
+            "action": "Check query plan improvement",
+            "sql_example": "EXPLAIN (ANALYZE) SELECT * FROM products WHERE category_id = 5 AND is_active = true;",
+            "risk": "low",
+            "is_online": true,
+            "requires_approval": false,
+            "rollback_notes": "Not applicable - read-only diagnostic operation",
+            "estimated_downtime": "none",
+            "priority": "immediate"
+          }
+        ],
+        "long_term_fixes": [
+          {
+            "action": "Adjust autovacuum settings for high-churn table",
+            "sql_example": "ALTER TABLE products SET (autovacuum_analyze_scale_factor = 0.02, autovacuum_analyze_threshold = 1000);",
+            "risk": "medium",
+            "is_online": true,
+            "requires_approval": false,
+            "rollback_notes": "ALTER TABLE products RESET (autovacuum_analyze_scale_factor, autovacuum_analyze_threshold);",
+            "priority": "long-term"
+          },
+          {
+            "action": "Increase default_statistics_target for frequently queried columns",
+            "sql_example": "ALTER TABLE products ALTER COLUMN category_id SET STATISTICS 500;",
+            "risk": "low",
+            "is_online": true,
+            "requires_approval": false,
+            "rollback_notes": "ALTER TABLE products ALTER COLUMN category_id SET STATISTICS -1;",
+            "priority": "long-term"
+          }
+        ],
+        "validation_steps": [
+          "Confirm last_analyze timestamp is recent",
+          "Compare query plans before and after ANALYZE",
+          "Verify row estimates match actual rows in EXPLAIN ANALYZE",
+          "Monitor query performance improvement",
+          "Check for any plan regressions on other queries"
+        ],
+        "preventive_actions": [
+          "Set up alerting for tables with stale statistics (>7 days)",
+          "Configure appropriate autovacuum_analyze_scale_factor for high-churn tables",
+          "Run ANALYZE after bulk data operations",
+          "Monitor rows modified per table to detect statistics needs",
+          "Include statistics health checks in deployment verification"
+        ]
+      },
+      "evidence": {
+        "query_metrics": {
+          "source": "pg_stat_statements",
+          "values": {
+            "calls": 10000,
+            "mean_time_ms": 150,
+            "total_time_ms": 1500000
+          }
+        },
+        "table_statistics": [
+          {
+            "table_name": "products",
+            "n_live_tup": 50000,
+            "n_dead_tup": 2500,
+            "dead_tuple_ratio": 0.05,
+            "last_analyze": "2026-01-13T00:00:00Z",
+            "last_autoanalyze": null,
+            "last_vacuum": "2026-01-20T02:00:00Z",
+            "seq_scan": 100,
+            "idx_scan": 5000
+          }
+        ],
+        "index_statistics": [
+          {
+            "index_name": "idx_products_category",
+            "idx_scan": 2000,
+            "idx_tup_fetch": 1500
+          }
+        ],
+        "locking_details": {},
+        "configuration_values": {
+          "autovacuum_analyze_scale_factor": 0.1,
+          "autovacuum_analyze_threshold": 50
+        }
+      },
+      "confidence": {
+        "confidence_score": 0.88,
+        "confidence_reasoning": "Statistics are clearly stale (>7 days), and there are significant data changes. The issue is straightforward to diagnose and fix.",
+        "evidence_count": 4
+      }
+    },
+    {
+      "metadata": {
+        "kb_id": "dba_blocking_query_001",
+        "category": "locking",
+        "severity": "high",
+        "source": "pg_stat_activity",
+        "version": "1.0",
+        "created_at": "2026-01-27T00:00:00Z",
+        "tags": ["blocking", "locking", "concurrency", "dba_safe"]
+      },
+      "problem_identity": {
+        "issue_type": "Blocking Transaction Detected",
+        "short_description": "Active blocking transaction causing performance degradation",
+        "long_description": "A transaction is holding a lock that blocks other queries, causing increased latency and potential timeouts. The blocking transaction has been active for an extended period, preventing concurrent access to affected rows/tables.",
+        "symptoms": [
+          "Query waiting for lock > 30 seconds",
+          "Increased connection pool utilization",
+          "Application timeouts for affected queries",
+          "pg_blocking_pids returns blocking PID"
+        ],
+        "affected_components": ["lock_manager", "transaction_manager", "executor"]
+      },
+      "detection_signals": {
+        "metrics": {
+          "wait_duration_seconds": 120,
+          "blocked_pid": 34521,
+          "blocking_pid": 33218,
+          "active_connections": 180
+        },
+        "thresholds": {
+          "wait_duration_seconds": "> 30",
+          "blocked_pids_count": "> 0",
+          "active_connections": "> 150"
+        },
+        "anomaly_flags": {
+          "blocking_detected": true,
+          "long_wait": true,
+          "pool_saturation": true
+        },
+        "source_queries": [
+          "SELECT pid, state, wait_event_type, wait_event, query_start, now() - query_start AS duration FROM pg_stat_activity WHERE state != 'idle' ORDER BY query_start;",
+          "SELECT blocked.pid AS blocked_pid, blocked.query AS blocked_query, blocker.pid AS blocker_pid, blocker.query AS blocker_query, blocked.wait_start - blocker.query_start AS wait_duration FROM pg_stat_activity AS blocked JOIN pg_stat_activity AS blocker ON blocked.pg_blocking_pids @> ARRAY[blocker.pid] WHERE blocked.state = 'active';",
+          "SELECT * FROM pg_locks WHERE NOT granted;"
+        ],
+        "detection_method": "threshold_alert"
+      },
+      "context": {
+        "query_fingerprint": {
+          "query_hash": "0xghi789",
+          "normalized_query": "UPDATE orders SET status = $1 WHERE customer_id = $2",
+          "query_type": "UPDATE",
+          "tables": ["orders"]
+        },
+        "environment": {
+          "database": "prod_db",
+          "schema": "public",
+          "application": "order-service",
+          "host": "db-prod-01",
+          "pg_version": "15.2"
+        },
+        "tables_involved": ["orders"],
+        "indexes_involved": ["idx_orders_customer_id"]
+      },
+      "root_cause_analysis": {
+        "primary_cause": "Long-running transaction holding row-level lock",
+        "contributing_factors": [
+          "Transaction started but not committed for extended period",
+          "Transaction holds lock while waiting for external resources",
+          "No statement_timeout configured",
+          "Missing index causing longer lock duration"
+        ],
+        "causation_chain": [
+          "1. Transaction A begins and acquires row lock on orders",
+          "2. Transaction B attempts to update same rows",
+          "3. Transaction B enters wait state for lock",
+          "4. Wait duration exceeds threshold",
+          "5. Application timeouts may occur"
+        ],
+        "planner_misbehavior": "Not applicable - this is a locking issue, not a planning issue"
+      },
+      "impact_analysis": {
+        "latency_impact": "Blocked queries experience 2-60+ second delays",
+        "throughput_impact": "Transaction throughput reduced by 50%",
+        "resource_pressure": ["connections", "lock_manager"],
+        "blast_radius": "high",
+        "application_impact": {
+          "api_latency_p95_ms": 15000,
+          "error_rate_percent": 5.0,
+          "connection_pool_status": "saturated (180/200 active)"
+        }
+      },
+      "recommendations": {
+        "immediate_actions": [
+          {
+            "action": "Identify blocking transaction",
+            "sql_example": "SELECT pid, usename, application_name, query, state, now() - xact_start AS transaction_duration, now() - query_start AS query_duration FROM pg_stat_activity WHERE pid = 33218;",
+            "risk": "low",
+            "is_online": true,
+            "requires_approval": false,
+            "rollback_notes": "Not applicable - read-only diagnostic operation",
+            "estimated_downtime": "none",
+            "priority": "immediate"
+          },
+          {
+            "action": "Check what the blocking transaction is waiting for",
+            "sql_example": "SELECT pid, wait_event_type, wait_event, state FROM pg_stat_activity WHERE pid = 33218;",
+            "risk": "low",
+            "is_online": true,
+            "requires_approval": false,
+            "rollback_notes": "Not applicable - read-only diagnostic operation",
+            "estimated_downtime": "none",
+            "priority": "immediate"
+          },
+          {
+            "action": "Evaluate whether to terminate blocking session",
+            "sql_example": "SELECT pg_terminate_backend(33218);",
+            "risk": "high",
+            "is_online": true,
+            "requires_approval": true,
+            "rollback_notes": "Transaction will be rolled back. May need to restart the transaction from the application.",
+            "estimated_downtime": "transaction rollback - potential data loss in that transaction",
+            "priority": "immediate",
+            "justification": "Only terminate if transaction is stuck and cannot complete. Consider letting it finish if possible."
+          },
+          {
+            "action": "Cancel blocking query (less aggressive than terminate)",
+            "sql_example": "SELECT pg_cancel_backend(33218);",
+            "risk": "high",
+            "is_online": true,
+            "requires_approval": true,
+            "rollback_notes": "Query will be cancelled, transaction remains active. May need to ROLLBACK the transaction.",
+            "estimated_downtime": "query cancellation - transaction may continue",
+            "priority": "immediate",
+            "justification": "Use pg_cancel_backend first as it's less disruptive than pg_terminate_backend"
+          }
+        ],
+        "long_term_fixes": [
+          {
+            "action": "Set statement_timeout to prevent long-running queries",
+            "sql_example": "ALTER SYSTEM SET statement_timeout = '30s'; SELECT pg_reload_conf();",
+            "risk": "medium",
+            "is_online": true,
+            "requires_approval": true,
+            "rollback_notes": "ALTER SYSTEM SET statement_timeout = '0'; SELECT pg_reload_conf(); (0 = no timeout)",
+            "priority": "long-term"
+          },
+          {
+            "action": "Set idle_in_transaction_session_timeout",
+            "sql_example": "ALTER SYSTEM SET idle_in_transaction_session_timeout = '5min'; SELECT pg_reload_conf();",
+            "risk": "medium",
+            "is_online": true,
+            "requires_approval": true,
+            "rollback_notes": "ALTER SYSTEM SET idle_in_transaction_session_timeout = '0';",
+            "priority": "long-term"
+          },
+          {
+            "action": "Add index to reduce lock duration",
+            "sql_example": "CREATE INDEX CONCURRENTLY idx_orders_customer_id ON orders(customer_id);",
+            "risk": "medium",
+            "is_online": true,
+            "requires_approval": false,
+            "rollback_notes": "DROP INDEX CONCURRENTLY idx_orders_customer_id;",
+            "priority": "long-term"
+          },
+          {
+            "action": "Review application transaction handling",
+            "sql_example": "-- Review application code for long-running transactions",
+            "risk": "low",
+            "is_online": true,
+            "requires_approval": false,
+            "rollback_notes": "Not applicable - application change",
+            "priority": "long-term"
+          }
+        ],
+        "validation_steps": [
+          "Confirm blocking transaction is resolved",
+          "Verify no new blocking patterns emerge",
+          "Monitor lock wait times return to normal (<1 second)",
+          "Check connection pool utilization decreases",
+          "Review application logs for timeout errors"
+        ],
+        "preventive_actions": [
+          "Set up alerting for lock waits > 30 seconds",
+          "Configure statement_timeout for all sessions",
+          "Set idle_in_transaction_session_timeout",
+          "Implement connection pool query timeouts",
+          "Add database connection monitoring dashboards",
+          "Review and optimize transaction logic in application",
+          "Ensure indexes exist for frequently updated columns",
+          "Schedule long-running batch jobs during low-traffic periods"
+        ]
+      },
+      "evidence": {
+        "query_metrics": {
+          "source": "pg_stat_activity",
+          "values": {
+            "blocked_sessions": 5,
+            "blocked_session_wait_seconds": 120,
+            "active_connections": 180,
+            "max_connections": 200
+          }
+        },
+        "table_statistics": [
+          {
+            "table_name": "orders",
+            "n_live_tup": 500000,
+            "n_dead_tup": 10000,
+            "seq_scan": 50,
+            "idx_scan": 10000
+          }
+        ],
+        "index_statistics": [],
+        "locking_details": {
+          "blocking_detected": true,
+          "blocked_pid": 34521,
+          "blocking_pid": 33218,
+          "blocked_query": "UPDATE orders SET status = 'shipped' WHERE customer_id = 12345",
+          "blocking_query": "BEGIN; UPDATE orders SET status = 'processing' WHERE customer_id = 12345; -- long pause",
+          "wait_event_type": "Lock",
+          "lock_type": "RowExclusiveLock",
+          "lock_mode": "ShareRowExclusiveLock",
+          "wait_duration_seconds": 120
+        },
+        "configuration_values": {
+          "statement_timeout": "0",
+          "idle_in_transaction_session_timeout": "0",
+          "max_connections": 200,
+          "lock_timeout": "0"
+        }
+      },
+      "confidence": {
+        "confidence_score": 0.95,
+        "confidence_reasoning": "Clear evidence of blocking transaction with specific PIDs, wait duration, and lock types. The issue is actively impacting system performance.",
+        "evidence_count": 6
+      }
+    }
+  ]
+}

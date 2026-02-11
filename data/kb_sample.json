@@ -1,0 +1,265 @@
+{
+  "kb_version": "1.0.0",
+  "entries": [
+    {
+      "metadata": {
+        "kb_id": "kb_query_latency_regression_001",
+        "category": "query_performance",
+        "severity": "critical",
+        "source": "pg_stat_statements",
+        "version": "1.0",
+        "created_at": "2026-01-27T00:00:00Z",
+        "tags": ["latency", "planner", "sequential_scan", "work_mem", "statistics"]
+      },
+      "problem_identity": {
+        "issue_type": "Query Latency Regression",
+        "short_description": "Severe latency regression due to planner misestimation and memory spills",
+        "long_description": "A critical query performance regression was detected where a frequently executed query experienced a 20x increase in execution time. The root cause is attributed to severe row estimation errors by the query planner, leading to inappropriate sequential scan decisions and nested loop joins instead of index-based operations. Additionally, insufficient work_mem caused disk-based sorting operations, generating over 1400 temporary files.",
+        "symptoms": [
+          "Execution time increased 20x (from 500ms to 10.8s)",
+          "Temp files created (1480 files)",
+          "Sequential scan on large table (orders with 500K rows)",
+          "High IO wait (28% of CPU time)",
+          "Connection pool saturation (198/200 connections)"
+        ],
+        "affected_components": ["planner", "executor", "io", "memory", "vacuum"]
+      },
+      "detection_signals": {
+        "metrics": {
+          "latency_deviation_factor": 20.0,
+          "cache_hit_ratio": 0.80,
+          "estimated_rows": 1000,
+          "actual_rows": 500000,
+          "temp_files_created": 1480,
+          "dead_tuple_ratio": 0.45,
+          "work_mem_mb": 4,
+          "seq_scan_ratio": 0.95
+        },
+        "thresholds": {
+          "latency_deviation_factor": "> 3x",
+          "row_estimation_error": "> 10x",
+          "temp_files": "> 0",
+          "cache_hit_ratio": "< 0.95",
+          "dead_tuple_ratio": "> 0.20"
+        },
+        "anomaly_flags": {
+          "execution_time_anomaly": true,
+          "temp_usage_anomaly": true,
+          "row_estimation_anomaly": true,
+          "plan_regression_detected": true,
+          "cache_degradation": true,
+          "dead_tuple_accumulation": true
+        },
+        "source_queries": [
+          "SELECT query, calls, mean_time, total_time FROM pg_stat_statements WHERE mean_time > 3 * (SELECT PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY mean_time) FROM pg_stat_statements)",
+          "SELECT schemaname, tablename, n_dead_tup, n_live_tup, last_analyze FROM pg_stat_user_tables WHERE n_dead_tup::float / (n_dead_tup + n_live_tup) > 0.20",
+          "SELECT * FROM pg_stat_activity WHERE state = 'active' AND wait_event_type = 'Lock'"
+        ],
+        "detection_method": "threshold_alert"
+      },
+      "context": {
+        "query_fingerprint": {
+          "query_hash": "0x9fbc23aa91",
+          "normalized_query": "SELECT o.id, c.name FROM orders o JOIN customers c ON o.customer_id = c.id WHERE o.created_at >= $1 AND o.status = $2",
+          "query_type": "SELECT",
+          "tables": ["orders", "customers"]
+        },
+        "environment": {
+          "database": "prod_pg_01",
+          "schema": "public",
+          "application": "orders-service",
+          "host": "db-prod-01.internal",
+          "pg_version": "15.2"
+        },
+        "tables_involved": ["orders", "customers"],
+        "indexes_involved": ["idx_orders_customer_id", "idx_orders_created_status"]
+      },
+      "root_cause_analysis": {
+        "primary_cause": "Severe row estimation error leading to sequential scan and nested loop join",
+        "contributing_factors": [
+          "Outdated table statistics (last ANALYZE was 22 days ago)",
+          "Insufficient work_mem (4MB vs recommended 64MB)",
+          "High dead tuple ratio on orders table (45%)",
+          "Blocking transaction holding lock for extended period",
+          "Missing composite index on filtering columns"
+        ],
+        "causation_chain": [
+          "1. Orders table received heavy UPDATE activity without adequate VACUUM",
+          "2. Dead tuple ratio accumulated to 45% but autovacuum thresholds not triggered",
+          "3. Statistics became stale (last ANALYZE 22 days ago)",
+          "4. Planner estimated 1000 rows but actual was 500,000 (500x error)",
+          "5. Planner chose sequential scan and nested loop instead of index scan",
+          "6. work_mem too low for hash join, causing disk spills",
+          "7. 1480 temp files created, causing IO wait spikes",
+          "8. Query execution time increased from 500ms to 10.8s",
+          "9. Connection pool saturated, causing application timeouts"
+        ],
+        "planner_misbehavior": "Planner underestimated rows by 500x and chose suboptimal scan and join strategy. The sequential scan on 500M rows was chosen over index scan due to stale statistics and incorrect selectivity estimation for the date range predicate."
+      },
+      "impact_analysis": {
+        "latency_impact": "P95 latency increased from 500ms to 10.8s (20x regression)",
+        "throughput_impact": "Query throughput reduced by 95% (from 2 qps to 0.1 qps)",
+        "resource_pressure": ["io", "memory", "cpu"],
+        "blast_radius": "high",
+        "application_impact": {
+          "api_latency_p95_ms": 4800,
+          "error_rate_percent": 6.2,
+          "connection_pool_status": "saturated (198/200 active)"
+        }
+      },
+      "recommendations": {
+        "immediate_actions": [
+          {
+            "action": "Run ANALYZE on affected tables to update statistics",
+            "sql_example": "ANALYZE orders; ANALYZE customers;",
+            "risk": "low",
+            "estimated_downtime": "none"
+          },
+          {
+            "action": "Increase work_mem for the session to eliminate temp file usage",
+            "sql_example": "SET work_mem = '128MB';",
+            "risk": "medium",
+            "estimated_downtime": "none"
+          },
+          {
+            "action": "Terminate blocking transaction if identified",
+            "sql_example": "SELECT pg_terminate_backend(33218);",
+            "risk": "high",
+            "estimated_downtime": "transaction rollback"
+          }
+        ],
+        "long_term_fixes": [
+          {
+            "action": "Create composite index on frequently filtered columns",
+            "config_example": "CREATE INDEX CONCURRENTLY idx_orders_created_status ON orders(created_at, status);",
+            "priority": "critical"
+          },
+          {
+            "action": "Tune autovacuum and statistics targets for orders table",
+            "config_example": "ALTER TABLE orders SET (autovacuum_analyze_scale_factor = 0.02, autovacuum_vacuum_scale_factor = 0.02, default_statistics_target = 500);",
+            "priority": "high"
+          },
+          {
+            "action": "Increase work_mem globally",
+            "config_example": "ALTER SYSTEM SET work_mem = '64MB'; SELECT pg_reload_conf();",
+            "priority": "high"
+          },
+          {
+            "action": "Configure autovacuum to run more frequently",
+            "config_example": "ALTER SYSTEM SET autovacuum_naptime = '30s'; ALTER SYSTEM SET autovacuum_max_workers = 4;",
+            "priority": "medium"
+          },
+          {
+            "action": "Reindex bloated index",
+            "sql_example": "REINDEX CONCURRENTLY idx_orders_customer_id;",
+            "priority": "medium"
+          }
+        ],
+        "validation_steps": [
+          "Compare new execution plan with baseline using EXPLAIN ANALYZE",
+          "Verify index is being used (Index Scan vs Seq Scan)",
+          "Confirm temp file creation stopped (check pg_stat_statements.temp_blks_written)",
+          "Monitor P95 latency for 24h to confirm improvement",
+          "Verify dead tuple ratio decreased below 20%",
+          "Check connection pool utilization returned to normal"
+        ],
+        "preventive_actions": [
+          "Set up alerting for stale statistics (last_analyze > 7 days)",
+          "Monitor row estimation accuracy (ratio of actual to estimated rows)",
+          "Alert when temp_blks_written increases significantly",
+          "Track plan changes in pg_stat_statements",
+          "Implement regular statistics health checks",
+          "Configure appropriate autovacuum thresholds for high-churn tables"
+        ]
+      },
+      "evidence": {
+        "query_metrics": {
+          "source": "pg_stat_statements",
+          "values": {
+            "calls": 18420,
+            "mean_time_ms": 9800,
+            "total_time_ms": 180516000,
+            "rows_returned": 250,
+            "shared_blks_hit": 1520000,
+            "shared_blks_read": 380000,
+            "temp_blks_written": 64000
+          }
+        },
+        "table_statistics": [
+          {
+            "table_name": "orders",
+            "n_dead_tup": 1840000,
+            "n_live_tup": 2250000,
+            "dead_tuple_ratio": 0.45,
+            "last_vacuum": "2025-12-15T02:12:00Z",
+            "last_autovacuum": "2026-01-10T04:18:00Z",
+            "last_analyze": "2026-01-05T01:10:00Z",
+            "seq_scan": 182000,
+            "idx_scan": 9400,
+            "seq_scan_ratio": 0.95
+          },
+          {
+            "table_name": "customers",
+            "n_dead_tup": 12000,
+            "n_live_tup": 500000,
+            "dead_tuple_ratio": 0.02,
+            "last_vacuum": "2026-01-20T02:05:00Z",
+            "last_autovacuum": "2026-01-26T03:55:00Z",
+            "last_analyze": "2026-01-26T03:55:00Z",
+            "seq_scan": 120,
+            "idx_scan": 18200
+          }
+        ],
+        "index_statistics": [
+          {
+            "index_name": "idx_orders_customer_id",
+            "table_name": "orders",
+            "idx_scan": 420,
+            "idx_tup_read": 82000,
+            "idx_tup_fetch": 410,
+            "index_size_mb": 256,
+            "bloat_estimate_mb": 128
+          }
+        ],
+        "locking_details": {
+          "blocking_detected": true,
+          "blocked_pid": 34121,
+          "blocking_pid": 33218,
+          "blocked_query": "SELECT ... FROM orders JOIN customers ...",
+          "blocking_query": "UPDATE orders SET status = 'CLOSED' WHERE ...",
+          "wait_event_type": "Lock",
+          "lock_type": "RowExclusiveLock",
+          "lock_mode": "ShareRowExclusiveLock"
+        },
+        "configuration_values": {
+          "work_mem_mb": 4,
+          "shared_buffers_mb": 16384,
+          "effective_cache_size_mb": 49152,
+          "max_connections": 200,
+          "autovacuum_naptime": "60s",
+          "autovacuum_max_workers": 3,
+          "key_ratios": {
+            "buffer_cache_hit_ratio": 0.80,
+            "commit_ratio": 0.92
+          }
+        },
+        "hardware_metrics": {
+          "cpu_utilization_percent": 35,
+          "load_average": 1.2,
+          "memory_free_gb": 2.1,
+          "swap_used": true,
+          "swap_used_gb": 4.2,
+          "disk_io_wait_percent": 28,
+          "disk_read_iops": 4500,
+          "disk_write_iops": 2800
+        }
+      },
+      "confidence": {
+        "confidence_score": 0.95,
+        "confidence_reasoning": "Multiple strong signals including: (1) Plan regression confirmed via EXPLAIN ANALYZE, (2) Row misestimation confirmed (1000 estimated vs 500000 actual), (3) Temp spill evidence from pg_stat_statements, (4) Stale statistics confirmed from pg_stat_user_tables, (5) High dead tuple ratio observed. All evidence points converge on the same root cause.",
+        "evidence_count": 8
+      }
+    }
+  ]
+}
+

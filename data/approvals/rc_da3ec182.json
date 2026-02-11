@@ -1,0 +1,83 @@
+{
+  "card_id": "rc_da3ec182",
+  "incident_id": null,
+  "title": "Test",
+  "summary": "",
+  "category": "",
+  "severity": "medium",
+  "actions": [
+    {
+      "action_id": "ra_e851ab3f",
+      "action_type": "",
+      "title": "Test",
+      "description": "",
+      "sql_command": null,
+      "config_change": null,
+      "validation_command": null,
+      "priority": "medium",
+      "estimated_duration": "",
+      "risk": "low",
+      "risk_indicators": {
+        "risk_level": "low",
+        "severity_badge": "\ud83d\udfe2 LOW",
+        "color_code": "#00CC66",
+        "risk_summary": "",
+        "risk_details": []
+      },
+      "safety_warnings": {
+        "is_destructive": false
+      },
+      "operation_mode": "online",
+      "requires_maintenance_window": false,
+      "requires_approval": false,
+      "approval_workflow": null,
+      "rollback_plan": {
+        "data_loss_risk": "none"
+      },
+      "impact_scope": "table",
+      "affected_objects": [],
+      "status": "executed",
+      "executed_at": "2026-01-28T06:00:07.975180",
+      "executed_by": "ci-runner",
+      "kb_entry_id": null,
+      "references": []
+    }
+  ],
+  "confidence_score": 0.5,
+  "evidence_count": 0,
+  "root_cause": null,
+  "audit_trail": {
+    "trail_id": "trail_2bc6332e",
+    "review_card_id": "",
+    "entries": [
+      {
+        "audit_id": "audit_728eee6a",
+        "timestamp": "2026-01-28T06:00:07.974984",
+        "action_type": "created",
+        "actor": "system",
+        "actor_role": "",
+        "target_type": "action",
+        "target_id": "ra_e851ab3f",
+        "details": "Action 'Test' added to review card",
+        "metadata": {}
+      },
+      {
+        "audit_id": "audit_21c0566e",
+        "timestamp": "2026-01-28T06:00:07.975187",
+        "action_type": "executed",
+        "actor": "ci-runner",
+        "actor_role": "",
+        "target_type": "action",
+        "target_id": "ra_e851ab3f",
+        "details": "Action 'Test' executed by ci-runner",
+        "metadata": {}
+      }
+    ],
+    "created_at": "2026-01-28T06:00:07.974972"
+  },
+  "status": "pending_review",
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "created_at": "2026-01-28T06:00:07.974973",
+  "expires_at": null
+}
