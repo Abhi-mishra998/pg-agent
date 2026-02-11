@@ -1,260 +1,205 @@
+Perfect 👍 — below is the FULL professional README.md file already formatted in proper Markdown (.md) structure.
+
+You can:
+
+👉 copy everything below
+👉 replace your current README.md content
+👉 save file
+👉 commit
+
+This is already written in senior-level GitHub style.
+
+⸻
+
+✅ COMPLETE README.md (Copy-Paste)
+
 # pg-agent
 
-A Python-based agent system that integrates with LLM (Llama), handles signal processing, parses inputs, validates agent outputs, and generates reports.
+**pg-agent** is a signal-driven PostgreSQL incident intelligence system designed to help engineers detect early warning signs before they escalate into production outages.
 
-## 📋 Overview
+Unlike traditional monitoring dashboards or generic AI assistants, pg-agent focuses on structured operational reasoning:
 
-pg-agent is an intelligent agent system that combines:
-- **CLI Interface** for interactive command processing
-- **LLM Integration** powered by Llama models via Ollama API
-- **Signal Processing** pipeline for data analysis
-- **Output Validation** using AI reasoning
-- **Report Generation** with HTML formatted incident reports
-
-## 🚀 Quick Start
-
-### 1. Clone and Setup
-```bash
-git clone <your-repo-url>
-cd pg-agent
-```
-
-### 2. Create Virtual Environment
-```bash
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-### 3. Install Dependencies
-```bash
-pip3 install -r requirements.txt
-```
-
-### 4. Configure Environment
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
-
-### 5. Run the Project
-```bash
-python3 main.py
-```
+- Detect signals
+- Validate evidence
+- Perform root cause analysis
+- Generate actionable runbooks only when confidence exists
 
 ---
 
-## 📁 Project Structure
+## 🎯 Why pg-agent Exists
 
-```
-pg-agent/
-├── main.py                      # Entry point with CLI argument parsing
-├── README.md                    # This file
-├── SETUP.md                     # Detailed setup guide
-├── requirements.txt             # Python dependencies
-├── .env.example                 # Environment template
-├── .gitignore                   # Git ignore rules
-│
-├── agent/                       # Agent modules
-│   ├── __init__.py
-│   ├── terminal_agent.py       # CLI loop for user interaction
-│   └── validator.py            # Validates agent outputs using LLM
-│
-├── collectors/                  # Data collectors
-│   └── __init__.py
-│
-├── data/                        # Data directories
-│   ├── raw/                     # Raw input data
-│   ├── normalized/              # Normalized data
-│   └── output/                  # Output files (reports, results)
-│
-├── llm/                         # LLM integration
-│   ├── __init__.py
-│   └── llama_client.py         # Ollama API client for Llama models
-│
-├── parser/                      # Input parsing
-│   ├── __init__.py
-│   └── input_parser.py         # CLI argument parsing
-│
-├── reports/                     # Report generation
-│   ├── __init__.py
-│   ├── report_generator.py     # HTML report generation
-│   └── templates/
-│       └── incident_report.html # Jinja2 report template
-│
-└── signals/                     # Signal processing
-    ├── __init__.py
-    ├── signal_engine.py        # Signal pipeline (generate → analyze → filter)
-    └── evidence_builder.py     # Evidence collection with confidence scores
-```
+Most PostgreSQL incidents do not begin with outages.
+
+They start with small operational signals:
+
+- Long-running queries
+- Blocking transactions
+- Dead tuples and maintenance issues
+- Misconfigured parameters
+- Subtle performance degradation
+
+Monitoring tools provide metrics — pg-agent focuses on **reasoning**.
 
 ---
 
-## 🧩 Key Modules
+## 🧠 Core Design Philosophy
 
-| Module | File | Purpose |
-|--------|------|---------|
-| **InputParser** | `parser/input_parser.py` | Parses CLI arguments: `--input`, `--output`, `--log-level` |
-| **LlamaClient** | `llm/llama_client.py` | Interacts with Ollama API (`http://localhost:11434`) |
-| **SignalEngine** | `signals/signal_engine.py` | Processes data through signal pipeline (generate → analyze → filter) |
-| **EvidenceBuilder** | `signals/evidence_builder.py` | Collects evidence from signal results with confidence scores |
-| **TerminalAgent** | `agent/terminal_agent.py` | Main CLI loop with command processing |
-| **Validator** | `agent/validator.py` | Validates agent responses using LLM reasoning |
-| **ReportGenerator** | `reports/report_generator.py` | Generates HTML incident reports with Jinja2 templates |
+pg-agent is intentionally designed around production reliability principles:
+
+- Signal-first architecture (no assumptions without signals)
+- Evidence-based decision making
+- Explicit confidence levels
+- Separation of detection, validation, and remediation
+- Silence when insufficient data exists
+
+The system is conservative by design to avoid hallucinated root causes.
 
 ---
 
-## 🔄 Data Flow
+## 🏗 Architecture Overview
 
-```
-CLI Input → InputParser → SignalEngine → EvidenceBuilder → TerminalAgent → Validator → ReportGenerator → HTML Report
-                        ↓
-                  LlamaClient (ollama)
-```
+User Input (CLI)
+│
+▼
+Terminal Agent (Command Router)
+│
+▼
+Signal Engine
+│
+▼
+Evidence Builder
+│
+▼
+Root Cause Engine
+│
+▼
+Recommendation Engine
+│
+▼
+Output Formatter / Reports
+│
+▼
+Knowledge Base (Past Incidents)
 
-**Flow Steps:**
-1. **InputParser** - Parses user arguments and input files
-2. **SignalEngine** - Generates signals, analyzes data, filters results
-3. **EvidenceBuilder** - Collects evidence with confidence scores
-4. **TerminalAgent** - Processes commands and interactions
-5. **Validator** - Validates outputs using LLM reasoning
-6. **ReportGenerator** - Creates formatted HTML reports
+---
+
+## ⚙️ Key Components
+
+| Component | Purpose |
+|-----------|---------|
+| TerminalAgent | Interactive CLI interface |
+| SignalEngine | Detects operational risk signals |
+| EvidenceBuilder | Validates signals with confidence scoring |
+| RootCauseEngine | Identifies likely causes |
+| Recommendation Engine | Generates runbooks and actions |
+| Validator | LLM-assisted validation layer |
+| ReportGenerator | HTML incident report generation |
+| LlamaClient | Ollama-based LLM integration |
 
 ---
 
 ## ✨ Features
 
-- 🤖 **Terminal Agent** - Interactive command-line interface for agent interactions
-- 🧠 **LLM Integration** - Llama model client for AI-powered processing via Ollama
-- 📊 **Signal Engine** - Process and analyze signals with pipeline stages
-- 📝 **Input Parser** - Parse and normalize CLI input data
-- ✅ **Validator** - Validate agent outputs using LLM reasoning
-- 📑 **Report Generator** - Generate detailed HTML incident reports
-- 🎨 **Jinja2 Templates** - Dynamic report generation with HTML templates
-- 📁 **Data Management** - Raw, normalized, and output data handling
+- CLI-first operational workflow
+- Signal-based PostgreSQL analysis
+- LLM-assisted reasoning via Ollama
+- Knowledge-base driven recommendations
+- Structured runbook generation
+- HTML incident reporting
+- Confidence scoring and validation
 
 ---
 
-## 🛠️ Requirements
+## 🚀 Quick Start
 
-### System Requirements
-- **Operating System**: macOS, Linux, or Windows
-- **Python Version**: 3.8+ (3.10+ recommended)
-- **RAM**: Minimum 4GB (8GB+ recommended for LLM operations)
-- **Disk Space**: At least 1GB free space
+### Clone repository
 
-### Required Software
-- Python 3.8+
-- pip3
-- Git
-- **Ollama** (for LLM integration) - Download from https://ollama.com
-
-### Python Dependencies
-```
-# Core Dependencies
-requests>=2.28.0
-python-dotenv>=1.0.0
-pyyaml>=6.0
-colorlog>=6.7.0
-
-# LLM Dependencies
-torch>=2.0.0
-transformers>=4.30.0
-accelerate>=0.20.0
-
-# Data Processing
-pandas>=2.0.0
-numpy>=1.24.0
-
-# Web Framework
-flask>=2.3.0
-jinja2>=3.1.0
-
-# Validation & Testing
-pydantic>=2.0.0
-pytest>=7.0.0
-pytest-cov>=4.0.0
-
-# Development
-black>=23.0.0
-mypy>=1.0.0
-pre-commit>=3.0.0
-watchfiles>=0.19.0
-```
-
----
-
-## 📖 Documentation
-
-- **[SETUP.md](SETUP.md)** - Detailed setup instructions, configuration options, and development guide
-- **Module Docstrings** - Each Python file contains detailed docstrings
-
----
-
-## 💻 Usage Examples
-
-### Basic Usage
 ```bash
-python3 main.py --input data/raw/input.txt --output data/output/
-```
+git clone <repo-url>
+cd pg-agent
 
-### With Custom Log Level
-```bash
-python3 main.py --input data/raw/data.json --output data/output/ --log-level DEBUG
-```
+Setup environment
 
-### Run in Interactive Mode
-```bash
-python3 main.py
-# Then enter commands in the interactive terminal
-```
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+Run interactive mode
+
+python main.py
+
+
+⸻
+
+🧩 Example Commands
+
+analyze SELECT * FROM orders;
+
+search blocking transaction
+
+runbook dead tuples cleanup
+
+report postgres performance incident
+
+
+⸻
+
+🔄 Data Flow
+
+CLI Input → Signal Detection → Evidence Validation → Root Cause Analysis → Recommendations → Report Output
+
+
+⸻
+
+📁 Project Structure
+
+pg-agent/
+├── main.py
+├── agent/
+├── core/
+├── signals/
+├── parser/
+├── llm/
+├── reports/
+├── data/
+├── tests/
+└── README.md
+
+
+⸻
+
+🔮 Future Improvements
+	•	EXPLAIN ANALYZE parsing support
+	•	Integration with pg_stat_activity and pg_stat_statements
+	•	Advanced confidence scoring
+	•	Expanded incident knowledge base
+	•	Automated remediation workflows
+
+⸻
+
+🧑‍💻 Development
+
+Requirements:
+	•	Python 3.8+
+	•	Ollama (for LLM integration)
+	•	macOS / Linux / Windows
+
+⸻
+
+📄 License
+
+MIT License
 
 ---
 
-## 📝 License
+# 🚀 Next Step (Strongly Recommended)
 
-MIT License - See LICENSE file for details
+Now your repo looks professional — but we can make it **elite-level**.
 
----
+If you want, next I can add:
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Install development dependencies
-4. Run tests with `pytest`
-5. Submit a pull request
-
----
-
-## ✅ Quality & Testing Status
-
-### Test Coverage
-- **Total Tests**: 130
-- **Pass Rate**: 100% ✓
-- **Modules Tested**:
-  - Core signal detection and root cause analysis
-  - Confidence scoring and evidence building
-  - Clarification engine for low-confidence scenarios
-  - Recommendation review & approval workflows
-  - Terminal agent and command processing
-
-### Code Quality
-- **Python Files**: 50 (all syntax-valid)
-- **Zero Duplicate Code**: Single source of truth for all models
-- **Package Exports**: Unified and consistent
-- **Dependencies**: Complete and documented in requirements.txt
-
-### Recent Cleanup (Jan 28, 2026)
-- ✓ Removed 11 duplicate documentation files
-- ✓ Removed 1 empty directory (collectors/)
-- ✓ Removed 2 orphaned files
-- ✓ Created missing review_renderer.py module
-- ✓ Updated package exports for review/approval system
-- ✓ All 130 tests passing
-
-See [PROJECT_CLEANUP_SUMMARY.md](PROJECT_CLEANUP_SUMMARY.md) for detailed cleanup report.
-
----
-
-**pg-agent** - An intelligent agent system for signal processing and AI-powered analysis.
+🔥 Architecture diagram image embedded in README  
+🔥 Senior-level badges (build, python, license, LLM)  
+🔥 Demo GIF section (VERY powerful on LinkedIn)  
+🔥 Engineering design philosophy section (this will impress CTOs heavily)
 
